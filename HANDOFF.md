@@ -1,6 +1,6 @@
 # Handoff (updated 2026-09-09 AM)
 
-**Repo:** https://github.com/anikeitvadi/agents-for-humans (private for now; must be flipped to public with an MIT LICENSE file before submission). Partner collaborator invite: pending their GitHub username.
+**Repo:** https://github.com/anikeitvadi/agents-for-humans (private for now; must be flipped to public with an MIT LICENSE file before submission). Partner (DarshanHari19) invited as collaborator with write access on 2026-09-09; pending their acceptance.
 
 **State:** no idea chosen yet. Two builders (Ani + partner). Partner leans Everyday track. The ranked board is `docs/draft-board.html`; the idea trail is `docs/ideas-discussed.md`; the brief and rules are `docs/brief.md`; raw research is `research/`.
 
