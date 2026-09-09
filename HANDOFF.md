@@ -1,5 +1,7 @@
 # Handoff (updated 2026-09-09 AM)
 
+**Repo:** https://github.com/anikeitvadi/agents-for-humans (private for now; must be flipped to public with an MIT LICENSE file before submission). Partner collaborator invite: pending their GitHub username.
+
 **State:** no idea chosen yet. Two builders (Ani + partner). Partner leans Everyday track. The ranked board is `docs/draft-board.html`; the idea trail is `docs/ideas-discussed.md`; the brief and rules are `docs/brief.md`; raw research is `research/`.
 
 **Recommended build (not yet accepted):** one engine that reads the government for you, two modules: immigration clocks + product recalls. Runner-up for Professional: DataQs violation challenge.
