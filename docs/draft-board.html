@@ -1,0 +1,413 @@
+<title>Agents for Humans Draft Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F3F5F7;
+    --surface: #FFFFFF;
+    --ink: #1B2430;
+    --ink-2: #4A5563;
+    --ink-3: #6B7785;
+    --rule: #D9DEE4;
+    --accent: #0F6E56;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E1F1EA;
+    --amber: #9A6A12;
+    --amber-soft: #F6ECD3;
+    --red: #9E3B2F;
+    --red-soft: #F5E2DE;
+    --tier1: #0F6E56;
+    --tier2: #2C5AA0;
+    --tier3: #8A93A0;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --display: "Bricolage Grotesque", "IBM Plex Sans", -apple-system, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0F1418;
+      --surface: #171D23;
+      --ink: #E8ECF0;
+      --ink-2: #B6BFC9;
+      --ink-3: #8592A0;
+      --rule: #2A333D;
+      --accent: #3DBB93;
+      --accent-ink: #0B1A15;
+      --accent-soft: #14312A;
+      --amber: #E0B24F;
+      --amber-soft: #33290F;
+      --red: #E58A7C;
+      --red-soft: #3A1E19;
+      --tier1: #3DBB93;
+      --tier2: #7AA2E3;
+      --tier3: #7C8794;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0F1418;
+    --surface: #171D23;
+    --ink: #E8ECF0;
+    --ink-2: #B6BFC9;
+    --ink-3: #8592A0;
+    --rule: #2A333D;
+    --accent: #3DBB93;
+    --accent-ink: #0B1A15;
+    --accent-soft: #14312A;
+    --amber: #E0B24F;
+    --amber-soft: #33290F;
+    --red: #E58A7C;
+    --red-soft: #3A1E19;
+    --tier1: #3DBB93;
+    --tier2: #7AA2E3;
+    --tier3: #7C8794;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 18px 64px; }
+
+  header { display: grid; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid var(--rule); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6vw, 44px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede { max-width: 62ch; color: var(--ink-2); margin: 0; }
+  .lede strong { color: var(--ink); }
+
+  .pick { margin-top: 22px; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 16px 18px; display: grid; gap: 8px; }
+  .pick h2 { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0; line-height: 1.15; }
+  .pick p { margin: 0; color: var(--ink-2); max-width: 66ch; }
+  .pick p strong { color: var(--ink); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 6px; align-items: center; }
+  .filters span { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-right: 4px; }
+  .filters button { font: 500 13px var(--sans); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  section.tier { margin-top: 30px; }
+  .tier-head { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 2px solid var(--tier-color); margin-bottom: 4px; }
+  .tier-head h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; line-height: 1.1; color: var(--tier-color); }
+  .tier-head p { margin: 0; color: var(--ink-2); max-width: 66ch; font-size: 14px; }
+  .t1 { --tier-color: var(--tier1); }
+  .t2 { --tier-color: var(--tier2); }
+  .t3 { --tier-color: var(--tier3); }
+
+  .row { display: grid; grid-template-columns: 44px 1fr; gap: 0 12px; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+  .row[hidden] { display: none; }
+  .rank { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1; color: var(--tier-color); padding-top: 2px; font-variant-numeric: tabular-nums; }
+  .body { display: grid; gap: 6px; min-width: 0; }
+  .title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+  .title h3 { font-family: var(--display); font-weight: 700; font-size: 18px; margin: 0; line-height: 1.2; }
+  .chip { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+  .chip.two { border-color: var(--accent); color: var(--accent); }
+  .who { color: var(--ink-2); font-size: 14px; }
+  .moment { font-size: 14.5px; }
+  .moment b { font-weight: 600; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .meta .score b { color: var(--ink); font-weight: 500; }
+  .note { font-size: 13.5px; color: var(--ink-2); }
+  .note.warn { color: var(--amber); }
+  .note.bad { color: var(--red); }
+  .fit { font-family: var(--mono); font-size: 12px; }
+  .fit.yes { color: var(--accent); }
+  .fit.stretch { color: var(--amber); }
+
+  .compact { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .compact li { padding: 10px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 3px; font-size: 14px; }
+  .compact li b { font-weight: 600; }
+  .compact li .why { color: var(--ink-2); font-size: 13.5px; }
+
+  .cut { margin-top: 22px; font-size: 13.5px; color: var(--ink-2); max-width: 70ch; }
+  .cut b { color: var(--ink); font-weight: 600; }
+
+  .method { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-2); max-width: 70ch; display: grid; gap: 8px; }
+  .method h2 { font-family: var(--display); font-size: 17px; margin: 0; color: var(--ink); }
+  .method p { margin: 0; }
+
+  .dates { margin-top: 26px; display: grid; gap: 6px; padding: 14px 16px; background: var(--amber-soft); border: 1px solid var(--rule); }
+  .dates .eyebrow { color: var(--amber); }
+  .dates p { margin: 0; font-size: 14px; }
+  .dates b { font-weight: 600; }
+
+  @media (min-width: 640px) {
+    .row { grid-template-columns: 52px 1fr; }
+    .rank { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Agents for Humans · Strands SDK · due Mon Sep 14, 5:00pm PT</div>
+    <h1>Agents for Humans Draft Board</h1>
+    <p class="lede">Thirty workflows people still do by hand in 2026, dug up by five research passes (everyday admin, logistics, community, small business, professional), scored by the researchers, then re-ranked for <strong>what two people can ship in four days and put in a five-minute video</strong>. Scores are U·D·A·I·E: uniqueness, demoability, data availability, impact, end-to-end fit, each out of 5.</p>
+  </header>
+
+  <div class="pick">
+    <div class="eyebrow">Recommended build</div>
+    <h2>One engine that reads the government so you don't have to. Two modules: immigration clocks and product recalls.</h2>
+    <p>Both are Everyday track, both run quietly and ping only on a real decision, both have <strong>verified public feeds</strong> (USCIS case status, Federal Register, the visa bulletin; CPSC, NHTSA, FDA recalls). Same spine: watch official sources, match them to your documents and receipts, act, ping. Immigration is the flagship and the story only we can tell. Recalls are the universal one and the cleanest live demo on the board. If we go Professional instead, #5 DataQs is the strongest technical demo: type any real USDOT number and watch it work on live data.</p>
+  </div>
+
+  <div class="filters" role="group" aria-label="Filter by track">
+    <span>Track</span>
+    <button type="button" data-track="all" aria-pressed="true">All</button>
+    <button type="button" data-track="everyday" aria-pressed="false">Everyday</button>
+    <button type="button" data-track="professional" aria-pressed="false">Professional</button>
+    <button type="button" data-track="neighbor" aria-pressed="false">Good Neighbor</button>
+  </div>
+
+  <section class="tier t1">
+    <div class="tier-head">
+      <h2>Tier 1 · Build candidates</h2>
+      <p>Real hours or dollars at stake, a demo moment, data we can hit live, and a scope two people can finish. Ordered by our fit, not by raw score.</p>
+    </div>
+
+    <article class="row" data-track="everyday">
+      <div class="rank">1</div>
+      <div class="body">
+        <div class="title"><h3>Immigration status guardian</h3><span class="chip">Everyday</span></div>
+        <div class="who">1.26M people in the employment-based green-card backlog (997K Indian-born), 1M+ international students, every H-1B, H-4, OPT, DACA, and TPS holder. Their lives run on clocks the government moves.</div>
+        <div class="moment"><b>The moment:</b> three PDFs in. "You have 55 days of status, not 20 months": CBP cut the I-94 to the passport expiry, and 180 days over is a 3-year bar. Attorney email drafted. Then it reads the visa bulletin unattended and says "file the I-485 this month."</div>
+        <div class="meta"><span class="score">U5 D4 A3 I4 E5 · <b>21</b></span><span>USCIS case status API verified (sandbox 1,000/day, prod 150K/day)</span><span>Federal Register API public</span></div>
+        <div class="note warn">I-94 has no API, so that part is document parsing. "Not an every-day use case" is true, but the brief rewards every-day <em>running</em>. Widen it with DMV, passport, and benefit-renewal clocks and it's everyone.</div>
+        <div class="fit yes">2 people, 4 days: yes</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="everyday">
+      <div class="rank">2</div>
+      <div class="body">
+        <div class="title"><h3>Recall-to-remedy</h3><span class="chip">Everyday</span></div>
+        <div class="who">Anyone who owns things. Consumer recall participation is about 6% (4% under $20). About 1 in 3 recalled cars is never repaired, roughly 149.5M vehicles.</div>
+        <div class="moment"><b>The moment:</b> a CPSC recall drops during the demo. The agent matches it to a 2024 receipt in the inbox, prefills the remedy form, and pings: "refund $218 or voucher $350?"</div>
+        <div class="meta"><span class="score">U4 D5 A5 I4 E5 · <b>23</b></span><span>CPSC, NHTSA, openFDA all live JSON, no auth</span></div>
+        <div class="note">Shares a spine with #1 (watch a feed, match to your life, act, ping) and with class-action claims. Cleanest live demo on the board.</div>
+        <div class="fit yes">2 people, 4 days: yes</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="everyday">
+      <div class="rank">3</div>
+      <div class="body">
+        <div class="title"><h3>Aging-parent Medicare guardian</h3><span class="chip">Everyday</span></div>
+        <div class="who">53M+ family caregivers. Medicare improper payments $31.7B (FY2024). 69% of beneficiaries never re-shop plans. Only about 12% of Medicare Advantage denials are appealed, and 81.7% of appeals win.</div>
+        <div class="moment"><b>The moment:</b> a new claim posts overnight in the Blue Button feed. The agent flags a phantom equipment supplier and a winnable ambulance denial, drafts the appeal form with the 120-day clock, one tap to approve. Second beat in October: "switching plans saves $611 a year on her actual drug list."</div>
+        <div class="meta"><span class="score">U4 D4 A5 I5 E5 · <b>23</b></span><span>Blue Button 2.0 sandbox: 10K synthetic enrollees</span></div>
+        <div class="note warn">Highest impact number on the board. Tier 1 on the scores, but it's the heaviest build (OAuth, claim parsing, appeals) and the demo runs on synthetic data by design.</div>
+        <div class="fit stretch">2 people, 4 days: stretch</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="neighbor">
+      <div class="rank">4</div>
+      <div class="body">
+        <div class="title"><h3>Pantry sorting-table agent</h3><span class="chip">Good Neighbor</span></div>
+        <div class="who">Volunteer-run food pantries. 56% of Missouri pantries and 75%+ of Maine's ~600 agencies have no paid staff; the volunteers profiled are 67 to 89 years old. A recall means re-checking hundreds of bins by hand.</div>
+        <div class="moment"><b>The moment:</b> photo of a mixed donation box. Live FDA recall hit by barcode, a "still fine" verdict on the date-labeled item from USDA FoodKeeper, pounds valued at Feeding America's audited $1.90 a pound, tax receipt emailed to the donor.</div>
+        <div class="meta"><span class="score">U5 D5 A5 I4 E4 · <b>23</b></span><span>openFDA + Open Food Facts verified live</span></div>
+        <div class="note warn">USDA FSIS recall feed was blocked from our machine; retest from AWS. The demo needs a real box and a camera, which is a plus on video.</div>
+        <div class="fit yes">2 people, 4 days: yes</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">5</div>
+      <div class="body">
+        <div class="title"><h3>DataQs roadside-violation challenge</h3><span class="chip">Professional</span><span class="chip two">found by 2 lanes</span></div>
+        <div class="who">Small trucking fleets. Challenges win 39% of the time, CSA scores drive insurance renewals and broker approval, and there's a 30-day window nobody tracks.</div>
+        <div class="moment"><b>The moment:</b> a judge types any real USDOT number. The agent pulls that carrier's safety scores and recent inspections live, flags one violation as challengeable (a lamp cited against a trailer they don't own, a log violation for a driver who qualifies for the short-haul exception), drafts the challenge with the CFR citation, and shows the projected percentile drop.</div>
+        <div class="meta"><span class="score">U5 D5 A5 I4 E4 · <b>23</b> (professional lane) · 17 (logistics lane)</span><span>FMCSA public data, free key</span></div>
+        <div class="note warn">Final submission needs the carrier's portal login, so the last step is browser automation. Two researchers scored it 6 points apart; the higher one had the better evidence (71,000+ challenges a year, new 21/21/45-day clocks since April 2026), but those volume numbers came from a secondary summary because fmcsa.gov blocked the fetch. Re-verify before they go in a pitch.</div>
+        <div class="fit yes">2 people, 4 days: yes</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">6</div>
+      <div class="body">
+        <div class="title"><h3>Detention recovery + rate-confirmation redline</h3><span class="chip">Professional</span></div>
+        <div class="who">Owner-operators and 1 to 20 truck fleets. $11.5B a year in unpaid detention. Drivers wait 14.3 hours a week; 17% of detention is never invoiced because they assume they won't be paid.</div>
+        <div class="moment"><b>The moment:</b> the geofence hits hour two. The agent texts the broker quoting the rate confirmation's detention clause. The broker replies "no in and out times on file." The agent rebuts with the ELD timestamps in seconds. Before that: the rate con lands and 20 seconds later there's a redline with counters and a "do not sign" flag.</div>
+        <div class="meta"><span class="score">U3 D5 A4 I5 E4 · <b>21</b> (+ rate con 20)</span><span>Load-board APIs are partner-gated; don't build the demo on them</span></div>
+        <div class="note warn">Uniqueness 3: DockClaim and DetentionIQ detect and invoice; nobody chases and escalates. The professional-lane researcher cut it outright ("five detention apps exist"), so the pitch has to be the collections loop, not detection. The live negotiation is the video.</div>
+        <div class="fit yes">2 people, 4 days: yes</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">7</div>
+      <div class="body">
+        <div class="title"><h3>Tariff refund recovery for small importers</h3><span class="chip">Professional</span><span class="chip two">found by 2 lanes</span></div>
+        <div class="who">330K importers of record, including small Shopify and Etsy sellers, with a $165B refund pool from the struck-down IEEPA tariffs. Refunds aren't automatic. Brokers charge about $200 plus $125 an entry, so anyone under $5K is priced out. About 30% of 272K declarations failed validation; $1.7B is stuck on missing bank details.</div>
+        <div class="moment"><b>The moment:</b> drop 40 customs entry PDFs. "$14,312 recoverable, 3 entries fall out of Phase 1 in 12 days." The refund CSV and the broker pass-through demand come out.</div>
+        <div class="meta"><span class="score">U4 D4 A4 I5 E4 · <b>21</b> · 19 (logistics lane)</span><span>HTS REST API verified; no ACE API</span></div>
+        <div class="note bad">The refund program has a pending appeal and could change under us before Monday. Biggest dollar number here, and the one we'd be nervous demoing.</div>
+        <div class="fit stretch">2 people, 4 days: stretch</div>
+      </div>
+    </article>
+  </section>
+
+  <section class="tier t2">
+    <div class="tier-head">
+      <h2>Tier 2 · Strong, but harder or narrower</h2>
+      <p>Real problems with real numbers. Each has one thing holding it back for this week: audience size for the judges, a data gap, or a build that won't fit.</p>
+    </div>
+
+    <article class="row" data-track="professional">
+      <div class="rank">8</div>
+      <div class="body">
+        <div class="title"><h3>CAM reconciliation audit for small tenants</h3><span class="chip">Professional</span></div>
+        <div class="who">Restaurants, salons, and shops on triple-net leases. The landlord's annual "common area" bill has a 60 to 180 day dispute window or the right is forfeited. Overbilling shows up in roughly 15 to 25% of audited statements; cited surprise bills of $11,400 and $47,000.</div>
+        <div class="moment"><b>The moment:</b> upload the lease and the statement. Every line mapped to its clause, pro-rata share recomputed, "$6,340 overbilled," certified-mail audit demand with the countdown.</div>
+        <div class="meta"><span class="score">U4 D5 A4 I4 E4 · <b>21</b></span></div>
+        <div class="note">Nobody serves single-location tenants. Narrow audience for a judge panel.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="everyday">
+      <div class="rank">9</div>
+      <div class="body">
+        <div class="title"><h3>Security deposit, both sides</h3><span class="chip">Everyday</span><span class="chip">Professional</span><span class="chip two">found by 2 lanes</span></div>
+        <div class="who">Only 42% of renters get the full deposit back; 10% get nothing (Zillow 2024). Small landlords get the statute wrong in the other direction and owe treble damages.</div>
+        <div class="moment"><b>The moment (tenant):</b> day 22 in California passes with no itemized statement; the demand letter citing Civil Code 1950.5 is already drafted. <b>(Landlord):</b> "Carpet is 7 of 8 years old: deduct $150, not $1,200, or you're exposed to treble damages."</div>
+        <div class="meta"><span class="score">tenant 18 · landlord U4 D5 A4 I4 E5 · <b>22</b></span><span>Statutes verified from state legislature sites</span></div>
+        <div class="note warn">DoNotPay was fined $193K by the FTC in this space. Whatever we build says exactly what it isn't.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="neighbor">
+      <div class="rank">10</div>
+      <div class="body">
+        <div class="title"><h3>Meals on Wheels "driver cancelled"</h3><span class="chip">Good Neighbor</span></div>
+        <div class="who">Local coordinators. 53% of programs are short on volunteers, 36K seniors are waitlisted, and one 800-client program spends 4 hours a week on routing plus an hour of phone calls every sick day.</div>
+        <div class="moment"><b>The moment:</b> click "Bob cancelled." Routes re-cut on the map, the agent phones floaters live until one says yes, texts the six late clients, writes the grant log line.</div>
+        <div class="meta"><span class="score">U3 D5 A4 I4 E5 · <b>21</b></span></div>
+        <div class="note">Most end-to-end thing found. Uniqueness is the weak score: routing tools exist, the phone loop doesn't.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="neighbor">
+      <div class="rank">11</div>
+      <div class="body">
+        <div class="title"><h3>Eviction docket watch</h3><span class="chip">Good Neighbor</span></div>
+        <div class="who">Legal aid and tenant unions. One Memphis team sends 500 to 700 postcards and 300 texts a week by hand. In South Carolina, reviewing thousands of daily filings inside the 10-day hearing window was "impossible" until a lawsuit opened the data.</div>
+        <div class="moment"><b>The moment:</b> paste a docket URL. Today's filings on a map, right-to-counsel ZIPs flagged, a bilingual text with the hearing date sent, attorney intake queue created.</div>
+        <div class="meta"><span class="score">U4 D4 A3 I5 E4 · <b>20</b></span></div>
+        <div class="note warn">Highest stakes in the community lane. Data is uneven state to state (Maryland's open set is ZIP-level only).</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">12</div>
+      <div class="body">
+        <div class="title"><h3>HVAC rebate and incentive filing</h3><span class="chip">Professional</span><span class="chip two">found by 2 lanes</span></div>
+        <div class="who">HVAC, electrical, and plumbing shops, per install. 20 to 45 minutes per utility claim, 60 to 90 for income-qualified programs, 25 more per resubmission.</div>
+        <div class="moment"><b>The moment:</b> two nameplate photos and a ZIP. AHRI certificate found live, tier and refrigerant rule checked, stacked incentives listed, utility PDF filled, and: "this coil pairing isn't AHRI-matched; swap to model X and the job qualifies for $1,600 more."</div>
+        <div class="meta"><span class="score">U4 D4 A4 I4 E4 · <b>20</b> · 20 (trades lane)</span><span>DSIRE and ENERGY STAR APIs verified</span></div>
+        <div class="note">A pre-seed startup (Resolv Systems) is already on it.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">13</div>
+      <div class="body">
+        <div class="title"><h3>Rejected produce load triage</h3><span class="chip">Professional</span></div>
+        <div class="who">Reefer owner-operators and small produce brokers. $10K+ claims per load, brokers withholding $5K+, drivers stranded three days.</div>
+        <div class="moment"><b>The moment:</b> Friday 4:40pm rejection at Hunts Point. The agent files the USDA inspection request, pulls terminal market prices for a salvage floor, lists licensed wholesalers within 15 miles, drafts the disposition plan.</div>
+        <div class="meta"><span class="score">U5 D4 A3 I4 E3 · <b>19</b></span><span>USDA market prices API free</span></div>
+        <div class="note">Nothing exists. Very niche for a judge panel, and the inspection request is a form, not an API.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="professional">
+      <div class="rank">14</div>
+      <div class="body">
+        <div class="title"><h3>Workers-comp premium audit defense</h3><span class="chip">Professional</span></div>
+        <div class="who">Small contractors on the insured side of the annual audit.</div>
+        <div class="moment"><b>The moment:</b> payroll register, sub payments, and a folder of insurance certificates in. "Expected additional premium $9,800." Two subs' certificates lapsed mid-year ($6,200 of it), an office employee pulled out of the roofing class code, overtime premium separated, rewritten to $2,340 with the dispute letter.</div>
+        <div class="meta"><span class="score">U4 D4 A3 I4 E4 · <b>19</b></span></div>
+        <div class="note">Good money story, narrow audience, class-code data is messy.</div>
+      </div>
+    </article>
+
+    <article class="row" data-track="neighbor">
+      <div class="rank">15</div>
+      <div class="body">
+        <div class="title"><h3>Grant narratives for volunteer fire departments</h3><span class="chip">Good Neighbor</span></div>
+        <div class="who">Unpaid chiefs. $3.9B requested against $290M available last year, 13 to 1. Six narratives of 4,000 characters, four of them peer-scored.</div>
+        <div class="moment"><b>The moment:</b> incident CSV plus a town name. Census stats pulled, the last five comparable awards in-state from OpenFEMA, the financial-need narrative at 3,950 of 4,000 characters, and a linter that catches a disallowed national statistic.</div>
+        <div class="meta"><span class="score">U4 D4 A4 I4 E4 · <b>20</b></span><span>OpenFEMA verified: 77,925 award rows</span></div>
+        <div class="note">Judged as writing help more than an agent doing work.</div>
+      </div>
+    </article>
+  </section>
+
+  <section class="tier t3">
+    <div class="tier-head">
+      <h2>Tier 3 · Real, but crowded or thin</h2>
+      <p>The researchers found the pain but also found products already on it, or evidence too thin to bet a week on.</p>
+    </div>
+    <ul class="compact">
+      <li data-track="everyday"><b>Medical bill audit and EOB reconciliation</b> <span class="why">19% of in-network claims denied, under 1% appealed. Uniqueness 2: HealthLock, Goodbill, Counterforce all exist. The only open gap is reconciling against the hospital's own posted rate.</span></li>
+      <li data-track="everyday"><b>Class-action claims matched to your purchases</b> <span class="why">Median claim rate 9%. Payout and ClaimDepot list settlements; none match receipts. Bot-fraud crackdown makes the attestation step the whole product.</span></li>
+      <li data-track="professional"><b>School immunization compliance</b> <span class="why">3·4·4·4·4. Photograph a handwritten Spanish vaccine card, run the CDC evaluation logic, draft the parent letter. Real, but school nurses aren't buying at a hackathon.</span></li>
+      <li data-track="professional"><b>Pharmacy below-cost claim appeals</b> <span class="why">Strong data (daily remittances, published cost benchmarks), uniqueness 2.5.</span></li>
+      <li data-track="professional"><b>Certified payroll for small subs</b> <span class="why">15 to 25 hours a week at five projects, but LCPtracker, Elation, Points North, and Miter own it. Uniqueness 2.</span></li>
+      <li data-track="professional"><b>Contractor prequalification questionnaires</b> <span class="why">40 to 80 hours the first time, only consultants do it, uniqueness 4, but the portals are gated so the demo is against an export.</span></li>
+      <li data-track="professional"><b>OEM warranty claims from a nameplate photo</b> <span class="why">30 to 60 day windows, $50 to $75 fees per claim. Score 17.</span></li>
+      <li data-track="neighbor"><b>Tenant-union building dossier</b> <span class="why">Three to five government sites per building, no national database. JustFix does it for NYC only. Score 17.</span></li>
+      <li data-track="neighbor"><b>Neighborhood agenda watch and public comment</b> <span class="why">Alerts already exist (Legistar-based tools); the open gap is drafting and filing the comment. Uniqueness 2.</span></li>
+      <li data-track="professional"><b>Cross-border returns duty recovery</b> <span class="why">Duty often exceeds product value. Data 2, end-to-end 2. Score 14.</span></li>
+    </ul>
+    <p class="cut"><b>Already owned by a product, cut by the research:</b> Amazon FBA reimbursements (Getida, Carbon6), duty drawback (Zollback), dock scheduling (Opendock shipped an MCP server), restaurant supplier ordering (Choco), farm CSA routing, oversize permits, machine-shop quoting, pet health certificates (Alita, GlobalVetLink), plan-check comment responses (Sumeria, TrussNote), IRS notice responses (TaxNotice.ai), youth-sports compliance (Ankored), flight-delay compensation (AirHelp, and DOT refunds are now automatic).</p>
+  </section>
+
+  <section class="tier t3">
+    <div class="tier-head">
+      <h2>From our chat, not researched yet</h2>
+      <p>Ideas we raised before the research ran. No evidence pass on these; scores would be guesses.</p>
+    </div>
+    <ul class="compact">
+      <li data-track="everyday"><b>Doctor appointment getter that beats ghost networks</b> <span class="why">Reads the insurance card, finds providers, actually calls offices to verify plan and new-patient status, books the earliest slot, prefills intake. The directory-error problem is well documented; the voice loop is the build risk. Worth a research pass if health is where we land.</span></li>
+      <li data-track="neighbor"><b>Storm dispatch swarm for a neighborhood</b> <span class="why">Intake, planner, dispatcher, monitor agents running evacuation rides and supplies on live feeds and a map of Houston. Coolest video, biggest build, no evidence pass.</span></li>
+      <li data-track="professional"><b>Delivery-platform reconciliation for restaurants</b> <span class="why">Pull DoorDash, Uber Eats, and Grubhub statements, reconcile against the POS, dispute wrongful refunds and fee errors. The consumer version (deals and macros) is dead: no ordering API, terms forbid automation.</span></li>
+      <li data-track="everyday"><b>Supplements and peptides</b> <span class="why">Dead. Buying recommendations aren't "real work," and peptides are a liability AWS judges won't reward. The only defensible piece is an interaction check against real prescriptions.</span></li>
+    </ul>
+  </section>
+
+  <div class="dates">
+    <div class="eyebrow">Dates that don't move</div>
+    <p><b>Thu Sep 11, 12pm PT:</b> last chance to claim the $50 AWS credits, per person.</p>
+    <p><b>Mon Sep 14, 5pm PT:</b> submission closes. We submit by noon.</p>
+    <p><b>Bonus:</b> up to three builder.aws.com posts at 0.2 each. That's 0.6 on a 5-point scale. Write all three.</p>
+  </div>
+
+  <div class="method">
+    <h2>How this was made</h2>
+    <p>Five research passes ran in parallel on Sep 8, one per lane, each screening 12 to 14 candidates and writing up its top six with steps, hours, data sources, existing tools, and evidence links. Reddit was unreachable from the research environment, so evidence comes from trade forums, industry surveys, court filings, government data, and vendor case studies (marked as such in the full reports). Every "verified live" note means the researcher hit the API that day.</p>
+    <p>The tiers and order on this page are a judgment layer on top of the researchers' scores: how a five-minute video lands, whether two people can finish by Sunday, and which stories we can tell honestly. "Found by 2 lanes" means two researchers surfaced the same workflow without seeing each other's work, which is the strongest signal a gap is real.</p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var buttons = document.querySelectorAll('.filters button');
+    var rows = document.querySelectorAll('[data-track]');
+    function apply(track) {
+      rows.forEach(function (r) {
+        if (r.tagName === 'BUTTON') return;
+        var tracks = r.getAttribute('data-track').split(' ');
+        r.hidden = !(track === 'all' || tracks.indexOf(track) !== -1);
+      });
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-track') === track)); });
+    }
+    buttons.forEach(function (b) { b.addEventListener('click', function () { apply(b.getAttribute('data-track')); }); });
+  })();
+</script>
