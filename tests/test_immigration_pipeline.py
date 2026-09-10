@@ -27,7 +27,10 @@ def test_matching_dates_stay_silent_and_produce_no_draft(tmp_path):
     assert result.draft is None
 
 
-def test_reprocessing_same_event_does_not_produce_a_second_draft(tmp_path):
+def test_reprocessing_same_event_does_not_produce_a_second_ping_but_keeps_the_draft(tmp_path):
+    # C2: a repeat poll (e.g. after a page reload or process restart) must
+    # not surface a second alert, but the unresolved draft from the first
+    # surfaced alert must still be retrievable — not silently dropped.
     store = Store(str(tmp_path / "ledger.db"))
 
     first = run_discrepancy_check(store, clock_id="c1", event_id="evt-1", fields=_sample_fields())
@@ -35,4 +38,19 @@ def test_reprocessing_same_event_does_not_produce_a_second_draft(tmp_path):
 
     assert first.alert.decision == "surfaced"
     assert second.alert.decision == "silent"
-    assert second.draft is None
+    assert second.draft is not None
+    assert second.draft.subject == first.draft.subject
+    assert second.draft.body == first.draft.body
+
+
+def test_draft_is_retrievable_after_restart(tmp_path):
+    db_path = tmp_path / "ledger.db"
+    store = Store(str(db_path))
+    first = run_discrepancy_check(store, clock_id="c1", event_id="evt-1", fields=_sample_fields())
+
+    restarted_store = Store(str(db_path))
+    replayed = run_discrepancy_check(restarted_store, clock_id="c1", event_id="evt-1", fields=_sample_fields())
+
+    assert replayed.alert.decision == "silent"
+    assert replayed.draft is not None
+    assert replayed.draft.body == first.draft.body

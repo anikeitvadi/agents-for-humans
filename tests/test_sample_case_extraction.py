@@ -37,6 +37,24 @@ def test_run_sample_case_surfaces_discrepancy_end_to_end(tmp_path):
     assert result.extraction.mode == "recorded"
 
 
+def test_run_sample_case_draft_survives_repeat_call_and_restart(tmp_path):
+    db_path = tmp_path / "ledger.db"
+    store = Store(str(db_path))
+
+    first = run_sample_case(
+        store, clock_id="c1", event_id="evt-1", client=RecordedResponseClient(), mode="recorded", model_id="fake-model-id"
+    )
+
+    restarted_store = Store(str(db_path))
+    replayed = run_sample_case(
+        restarted_store, clock_id="c1", event_id="evt-1", client=RecordedResponseClient(), mode="recorded", model_id="fake-model-id"
+    )
+
+    assert replayed.alert.decision == "silent"
+    assert replayed.draft is not None
+    assert replayed.draft.body == first.draft.body
+
+
 def test_run_sample_case_does_not_run_the_rule_when_extraction_needs_review(tmp_path):
     store = Store(str(tmp_path / "ledger.db"))
     client = RecordedResponseClient(responses={"i94": {}, "i797": {}, "passport": {}})

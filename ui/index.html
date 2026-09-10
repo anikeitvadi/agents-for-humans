@@ -115,7 +115,11 @@ async function loadSampleCase() {
   const resultBody = document.getElementById('result-body');
   if (result.error) {
     resultBody.replaceChildren(el('div', { className: 'field-value', text: `Needs review: ${result.error}` }));
-  } else if (result.alert.decision === 'surfaced' && result.draft) {
+  } else if (result.draft) {
+    // A draft here means either a brand-new surfaced alert, or an
+    // unresolved draft retrieved from a prior surfaced alert (C2) — either
+    // way there is still one thing that needs the user, even if this
+    // particular call produced no new ping.
     const draftBody = el('div', { className: 'draft-body' });
     draftBody.append(el('strong', { text: result.draft.subject }), document.createTextNode('\n\n' + result.draft.body));
     resultBody.replaceChildren(el('div', { className: 'field-value', text: result.alert.reason }), draftBody);

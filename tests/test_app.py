@@ -37,14 +37,27 @@ def test_process_sample_case_surfaces_discrepancy_with_draft(tmp_path):
     assert body["error"] is None
 
 
-def test_reprocessing_sample_case_does_not_surface_twice(tmp_path):
+def test_reprocessing_sample_case_does_not_surface_twice_but_keeps_the_draft(tmp_path):
     client = _client(tmp_path)
 
-    client.post("/api/process-sample-case")
+    first = client.post("/api/process-sample-case")
     second = client.post("/api/process-sample-case")
 
     assert second.json()["alert"]["decision"] == "silent"
-    assert second.json()["draft"] is None
+    assert second.json()["draft"] == first.json()["draft"]
+
+
+def test_sample_case_draft_survives_across_app_restarts(tmp_path):
+    db_path = str(tmp_path / "demo.db")
+    first_app_client = TestClient(create_app(db_path=db_path))
+    first = first_app_client.post("/api/process-sample-case")
+
+    # Simulate a process restart: a fresh app/Store pointed at the same file.
+    restarted_client = TestClient(create_app(db_path=db_path))
+    replayed = restarted_client.post("/api/process-sample-case")
+
+    assert replayed.json()["alert"]["decision"] == "silent"
+    assert replayed.json()["draft"] == first.json()["draft"]
 
 
 def test_gate_demo_endpoint_shows_two_silent_one_surfaced(tmp_path):

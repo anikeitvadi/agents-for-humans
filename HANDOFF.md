@@ -1,5 +1,14 @@
 # Handoff (updated 2026-09-10 PM)
 
+**C2 done (2026-09-10) — persistent case/draft lifecycle:**
+- `agent/engine/store.py`: new `drafts` table + `Store.save_draft()`/`get_draft()`, same sticky-upsert pattern as F3's `save_alert` fix — a `"ready"` draft is never overwritten (so it survives restart/reload untouched); a `"failed"` draft is not sticky, so a retry that succeeds replaces it and a retry that fails again is a safe no-op, not a lost action.
+- `agent/packs/immigration/pipeline.py::run_discrepancy_check`: on a newly surfaced alert, builds and persists the draft. On a `silent` outcome (repeat poll, restart, or replay) it now looks up any existing `"ready"` draft and returns it instead of `None` — a reload/restart no longer loses access to an unresolved draft, while still producing no new ping (`decision` stays `silent`).
+- `ui/index.html`: the result card now shows the draft whenever one exists (new or retrieved), not only when `decision === "surfaced"`.
+- Existing tests updated to encode the new contract (`test_reprocessing_same_event_does_not_produce_a_second_draft` → `..._keeps_the_draft`); added restart-survival tests at the store, pipeline, and app layers.
+- Verified: `.venv/bin/python -m pytest -q` → 82 passed, 3 deselected (live). Not yet browser-verified (Chrome extension still not connected in this environment).
+- Scope note: did not add an approval/resolve UI step — the handoff explicitly marks that optional ("if approval is added..."); out of scope for this pass.
+- Next: C3 (unattended bulletin poll), then C4 (recall through the shared engine).
+
 **C1 done (2026-09-10) — real sample-document extraction wired end to end:**
 - Three synthetic specimen-format images generated (`fixtures/sample_case/generate_specimens.py` → `fixtures/sample_case/specimens/{i94,i797,passport}.png`), coherent invented identity/dates across all three (matches the existing 55-day discrepancy beat).
 - `agent/llm/document_client.py` (new): picks a live `bedrock-runtime` client when AWS credentials are configured, else `RecordedResponseClient` replaying `fixtures/sample_case/recorded_extraction_response.json` — either way the real `extract_fields()` validation logic (F2/F4 fixes included) runs unchanged; only the Converse response source differs. Every result carries an explicit `mode: "live"|"recorded"` label.

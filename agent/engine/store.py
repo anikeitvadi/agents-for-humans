@@ -6,6 +6,7 @@ duplicate alerts.
 
 import json
 import sqlite3
+from dataclasses import dataclass
 
 from agent.engine.schema import Alert, Event
 
@@ -26,7 +27,26 @@ CREATE TABLE IF NOT EXISTS alerts (
     reason TEXT NOT NULL,
     PRIMARY KEY (clock_id, event_id, rule_version)
 );
+
+CREATE TABLE IF NOT EXISTS drafts (
+    clock_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    rule_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    subject TEXT,
+    body TEXT,
+    used_llm_personalization INTEGER,
+    PRIMARY KEY (clock_id, event_id, rule_version)
+);
 """
+
+
+@dataclass
+class DraftRecord:
+    status: str  # "ready" | "failed"
+    subject: str | None
+    body: str | None
+    used_llm_personalization: bool | None
 
 
 class Store:
@@ -88,6 +108,58 @@ class Store:
         except sqlite3.IntegrityError:
             self._conn.rollback()
             return False
+
+    def save_draft(
+        self,
+        clock_id: str,
+        event_id: str,
+        rule_version: str,
+        status: str,
+        subject: str | None,
+        body: str | None,
+        used_llm_personalization: bool | None,
+    ) -> bool:
+        """Upsert a draft's lifecycle state (C2). A "ready" row is sticky —
+        never overwritten — so a caller can always retrieve the original
+        draft on reload/restart. A "failed" row is not sticky, so a retry
+        that succeeds can replace it; a retry that fails again is a no-op,
+        not a silently lost action.
+        """
+        used_llm_personalization_int = None if used_llm_personalization is None else int(used_llm_personalization)
+        try:
+            cursor = self._conn.execute(
+                """
+                INSERT INTO drafts (clock_id, event_id, rule_version, status, subject, body, used_llm_personalization)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (clock_id, event_id, rule_version) DO UPDATE SET
+                    status = excluded.status,
+                    subject = excluded.subject,
+                    body = excluded.body,
+                    used_llm_personalization = excluded.used_llm_personalization
+                WHERE drafts.status != 'ready'
+                """,
+                (clock_id, event_id, rule_version, status, subject, body, used_llm_personalization_int),
+            )
+            self._conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError:
+            self._conn.rollback()
+            return False
+
+    def get_draft(self, clock_id: str, event_id: str, rule_version: str) -> DraftRecord | None:
+        row = self._conn.execute(
+            "SELECT status, subject, body, used_llm_personalization FROM drafts "
+            "WHERE clock_id = ? AND event_id = ? AND rule_version = ?",
+            (clock_id, event_id, rule_version),
+        ).fetchone()
+        if row is None:
+            return None
+        return DraftRecord(
+            status=row[0],
+            subject=row[1],
+            body=row[2],
+            used_llm_personalization=None if row[3] is None else bool(row[3]),
+        )
 
     def list_alerts(self, clock_id: str) -> list[Alert]:
         rows = self._conn.execute(

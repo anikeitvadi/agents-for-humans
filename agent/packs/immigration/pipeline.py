@@ -134,10 +134,35 @@ def run_discrepancy_check(
 
     draft = None
     if alert.decision == "surfaced":
+        # First (and only) claim of this alert — F3 guarantees a later
+        # repeat call gets "silent" instead, so this always builds a new
+        # draft, never a duplicate. Persist it so it survives a page
+        # reload or process restart (C2) instead of existing only in this
+        # one response.
         draft = build_attorney_draft(
             rule_message=discrepancy.message,
             subject_facts={"case_name": fields.get("case_name", "immigration documents")},
             agent=agent,
         )
+        store.save_draft(
+            clock_id=clock.clock_id,
+            event_id=event.event_id,
+            rule_version=event.rule_version,
+            status="ready",
+            subject=draft.subject,
+            body=draft.body,
+            used_llm_personalization=draft.used_llm_personalization,
+        )
+    else:
+        # No new ping, but a prior surfaced alert may have left an
+        # unresolved draft — retrieve it rather than silently dropping
+        # access to it (C2's "reload/restart retrieves the original draft").
+        existing = store.get_draft(clock_id=clock.clock_id, event_id=event.event_id, rule_version=event.rule_version)
+        if existing is not None and existing.status == "ready":
+            draft = DraftResult(
+                subject=existing.subject,
+                body=existing.body,
+                used_llm_personalization=bool(existing.used_llm_personalization),
+            )
 
     return PipelineResult(alert=alert, draft=draft)
