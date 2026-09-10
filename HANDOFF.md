@@ -1,5 +1,23 @@
 # Handoff (updated 2026-09-10 PM)
 
+**Next steps, in order (as of 2026-09-10 PM):**
+1. **PR #1 review/merge** — `implementation/day2-bug-fixes` → `main`, open at https://github.com/anikeitvadi/agents-for-humans/pull/1, mergeable, contains F1–F5 + C1–C4, 109 tests passing, all five demo flows browser-verified. Someone (Ani or partner) should read and merge it.
+2. **Flip the repo public + confirm the MIT LICENSE** shows in the GitHub "About" section — required before submission; repo was still private as of the last check.
+3. **Partner (DarshanHari19) collaborator invite** — sent 2026-09-09, acceptance still unconfirmed; needed before real two-person work (ownership split, video) can start.
+4. **Resolve the "who owns what" and repo-rename decisions** — still open, waiting on the humans (see "Decisions waiting on the humans" below); blocks splitting remaining work.
+5. **Export the architecture diagram as an image** for the README/video per submission requirements.
+6. **Reconcile README prose end-to-end** against current real behavior (it doesn't reference stale fixtures, but hasn't been read fully against the finished C1–C4 implementation).
+7. **Attempt AgentCore Runtime deploy** (Day-3 item) — needs real AWS/AgentCore CLI access not available in this sandbox; verify imports, data-directory init, payload contract, model wiring per the implementation-handoff's finish checklist.
+8. **Record the 5-minute demo video** (problem / who / why) and write the three required builder.aws posts — last, once the above is settled.
+
+**Browser verification done (2026-09-10), all five demo controls, on a clean `data/demo.db`:**
+- Load sample case (twice): correct dates/evidence, 55-day gap flagged, draft renders as plain text (confirms the F5 HTML-injection fix holds visually, not just in the regression test); second click correctly shows "no new ping" while still displaying the same saved draft (C2 confirmed live).
+- Show decision gate: one green "surfaced" pill, two gray "silent" pills.
+- Run recall demo: labeled "live CPSC feed," real match against the real Cambridge Audio speaker recall ($218/$350); unmatched receipt produces no ping.
+- Poll bulletin September 2025: silent/`not_current`, no ping. Poll bulletin October 2025: surfaces "Sample Bulletin Case — EB2-India — current" with a real attorney-review draft, unattended.
+- One false alarm caught and resolved: the very first click showed no draft — turned out to be a stale row in `data/demo.db` left over from a `curl` smoke test run during C1, before the draft-persistence feature (C2) existed. Not a real bug; fixed by deleting that file (gitignored, not committed) and restarting clean. Worth remembering: don't reuse `data/demo.db` across sessions spanning a schema/behavior change — wipe it first.
+- Everything else from the "browser-based UI verification is still outstanding" note below is now resolved.
+
 **C1–C4 all done (2026-09-10).** C4 (recall through the shared engine) closes out the implementation-handoff's punch list:
 
 **C4 — recall through the shared engine, with a real live CPSC feed:**
