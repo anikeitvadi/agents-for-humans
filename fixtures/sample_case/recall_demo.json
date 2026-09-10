@@ -1,0 +1,21 @@
+{
+  "recall_item": {
+    "manufacturer": "Cambridge Audio",
+    "product_name": "Melomania Touch Earbuds",
+    "remedy_options": [
+      { "type": "refund", "amount": 218 },
+      { "type": "voucher", "amount": 350 }
+    ],
+    "source": "CPSC recall feed (live, no auth) — see research/research-everyday-admin.md"
+  },
+  "seeded_receipt": {
+    "manufacturer": "Cambridge Audio",
+    "product_name": "Melomania Touch Earbuds",
+    "purchase_date": "2024-06-01"
+  },
+  "unmatched_receipt": {
+    "manufacturer": "Sony",
+    "product_name": "WF-1000XM5",
+    "purchase_date": "2024-06-01"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "case_name": "Sample Case — H-1B, I-94 cut to passport expiry",
+  "admit_until": "2026-11-03",
+  "i797_valid_until": "2026-12-28",
+  "passport_expiry": "2026-11-03",
+  "evidence": {
+    "admit_until": "I-94 Arrival/Departure Record — Admit Until Date: 11/03/2026",
+    "i797_valid_until": "Form I-797 Notice of Action — Valid from 12/29/2023 to 12/28/2026",
+    "passport_expiry": "Passport — Date of Expiration: 03 NOV 2026"
+  },
+  "note": "Synthetic fixture. Field values and evidence text are invented to match public CBP/USCIS specimen layouts; no real person's documents. TODO: replace evidence text with rendered specimen-format PDF/image assets before recording the demo video (see architecture-spec.md §7)."
+}

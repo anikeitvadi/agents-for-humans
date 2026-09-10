@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Immigration Status Guardian — demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F3F5F7; --surface: #FFFFFF; --ink: #1B2430; --ink-2: #4A5563; --ink-3: #6B7785;
+    --rule: #D9DEE4; --accent: #0F6E56; --accent-soft: #E1F1EA; --amber: #9A6A12; --amber-soft: #F6ECD3;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --sans: "IBM Plex Sans", -apple-system, sans-serif;
+    --display: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground: #0F1418; --surface: #171D23; --ink: #E8ECF0; --ink-2: #B6BFC9; --ink-3: #8592A0;
+      --rule: #2A333D; --accent: #3DBB93; --accent-soft: #14312A; --amber: #E0B24F; --amber-soft: #33290F; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 18px 64px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 5vw, 36px); margin: 6px 0 4px; }
+  .lede { color: var(--ink-2); max-width: 62ch; margin: 0 0 22px; }
+  button { font: 600 14px var(--sans); padding: 10px 18px; border-radius: 6px; border: 1px solid var(--accent);
+    background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: var(--surface); color: var(--ink); border-color: var(--rule); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; margin-bottom: 16px; }
+  .card h2 { font-family: var(--display); font-size: 16px; margin: 0 0 10px; }
+  .evidence { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); background: var(--ground);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; margin: 4px 0 10px; }
+  .field-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
+  .field-value { font-weight: 600; margin: 2px 0 2px; }
+  .one-thing { border-left: 4px solid var(--accent); }
+  .one-thing .badge { display: inline-block; font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 999px; margin-bottom: 8px; }
+  .draft-body { white-space: pre-wrap; font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); margin-top: 10px; padding-top: 10px; }
+  .gate-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+  .gate-row:last-child { border-bottom: none; }
+  .pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .pill.surfaced { background: var(--accent-soft); color: var(--accent); }
+  .pill.silent { background: var(--rule); color: var(--ink-3); }
+  .disclaimer { font-size: 12.5px; color: var(--amber); background: var(--amber-soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 20px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Agents for Humans · demo build</div>
+  <h1>Immigration Status Guardian</h1>
+  <p class="lede">One engine that reads the government so you don't have to. This flags a <strong>document-date discrepancy</strong> for your attorney's review — it never determines your lawful status.</p>
+  <div class="disclaimer">Not legal advice. Every result here is a flag for your attorney, never a status or eligibility determination.</div>
+
+  <div class="row">
+    <button id="load-btn">Load sample case</button>
+    <button id="gate-btn" class="secondary">Show decision gate</button>
+    <button id="recall-btn" class="secondary">Run recall demo</button>
+  </div>
+
+  <div id="parse-card" class="card hidden">
+    <h2>Parse step</h2>
+    <div id="parse-fields"></div>
+  </div>
+
+  <div id="result-card" class="card one-thing hidden">
+    <span class="badge">One thing needs you</span>
+    <div id="result-body"></div>
+  </div>
+
+  <div id="gate-card" class="card hidden">
+    <h2>Decision gate — quiet unless it matters</h2>
+    <div id="gate-rows"></div>
+  </div>
+
+  <div id="recall-card" class="card hidden">
+    <h2>Recall-to-remedy (demo-scope pack)</h2>
+    <div id="recall-body"></div>
+  </div>
+</div>
+
+<script>
+// Dynamic values (API/model text) always go through textContent, never
+// innerHTML — a draft or evidence string containing markup must render as
+// literal text, not be parsed as HTML (F5).
+function el(tag, { className, text, style } = {}) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  if (style) Object.assign(node.style, style);
+  return node;
+}
+
+async function loadSampleCase() {
+  const fields = await fetch('/api/sample-case').then(r => r.json());
+  const parseCard = document.getElementById('parse-card');
+  const parseFields = document.getElementById('parse-fields');
+  parseFields.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].flatMap(key => [
+    el('div', { className: 'field-label', text: key }),
+    el('div', { className: 'field-value', text: fields[key] }),
+    el('div', { className: 'evidence', text: fields.evidence[key] }),
+  ]));
+  parseCard.classList.remove('hidden');
+
+  const result = await fetch('/api/process-sample-case', { method: 'POST' }).then(r => r.json());
+  const resultCard = document.getElementById('result-card');
+  const resultBody = document.getElementById('result-body');
+  if (result.alert.decision === 'surfaced' && result.draft) {
+    const draftBody = el('div', { className: 'draft-body' });
+    draftBody.append(el('strong', { text: result.draft.subject }), document.createTextNode('\n\n' + result.draft.body));
+    resultBody.replaceChildren(el('div', { className: 'field-value', text: result.alert.reason }), draftBody);
+  } else {
+    resultBody.replaceChildren(el('div', { className: 'field-value', text: `Silent: ${result.alert.reason}` }));
+  }
+  resultCard.classList.remove('hidden');
+}
+
+async function showGateDemo() {
+  const data = await fetch('/api/gate-demo').then(r => r.json());
+  const rows = document.getElementById('gate-rows');
+  rows.replaceChildren(...data.results.map(r => {
+    const row = el('div', { className: 'gate-row' });
+    row.append(el('span', { text: r.label }), el('span', { className: `pill ${r.decision}`, text: r.decision }));
+    return row;
+  }));
+  document.getElementById('gate-card').classList.remove('hidden');
+}
+
+async function runRecallDemo() {
+  const matched = await fetch('/api/recalls/check', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'seeded' })
+  }).then(r => r.json());
+  const unmatched = await fetch('/api/recalls/check', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'unmatched' })
+  }).then(r => r.json());
+  document.getElementById('recall-body').replaceChildren(
+    el('div', { className: 'field-label', text: 'Seeded receipt' }),
+    el('div', { className: 'field-value', text: `${matched.matched ? 'Matched' : 'No match'} — ${matched.message}` }),
+    el('div', { className: 'field-label', text: 'Unmatched receipt (no false ping)', style: { marginTop: '10px' } }),
+    el('div', { className: 'field-value', text: `${unmatched.matched ? 'Matched' : 'No match'} — ${unmatched.message}` }),
+  );
+  document.getElementById('recall-card').classList.remove('hidden');
+}
+
+document.getElementById('load-btn').addEventListener('click', loadSampleCase);
+document.getElementById('gate-btn').addEventListener('click', showGateDemo);
+document.getElementById('recall-btn').addEventListener('click', runRecallDemo);
+</script>
+</body>
+</html>
