@@ -18,14 +18,15 @@ from agent.llm.document_client import build_extraction_client
 from agent.llm.draft import build_bedrock_agent
 from agent.packs.immigration.bulletin import load_seeded_case, run_bulletin_poll
 from agent.packs.immigration.pipeline import extract_sample_case_fields, run_sample_case
-from agent.packs.recalls.rules import match_recall_to_receipt
+from agent.packs.recalls.feed import get_recall_item
+from agent.packs.recalls.pipeline import run_recall_check
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIXTURES_DIR = REPO_ROOT / "fixtures" / "sample_case"
+RECALLS_FIXTURES_DIR = REPO_ROOT / "fixtures" / "recalls"
 
 
-def _load_json(name: str) -> dict:
-    return json.loads((FIXTURES_DIR / name).read_text())
+def _load_receipts() -> dict:
+    return json.loads((RECALLS_FIXTURES_DIR / "receipts.json").read_text())
 
 
 class RecallCheckRequest(BaseModel):
@@ -43,7 +44,7 @@ class BulletinPollRequest(BaseModel):
 _PRIOR_BULLETIN_MONTH = {"2025-10": "2025-09"}
 
 
-def create_app(db_path: str = "data/demo.db") -> FastAPI:
+def create_app(db_path: str = "data/demo.db", attempt_live_recall_feed: bool = False) -> FastAPI:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     store = Store(db_path)
     # None when no AWS credentials are configured (e.g. this sandbox) — the
@@ -55,6 +56,12 @@ def create_app(db_path: str = "data/demo.db") -> FastAPI:
     # mode is surfaced in every response below so the UI never presents a
     # recorded replay as a live parse.
     extraction_client, extraction_mode = build_extraction_client()
+    # attempt_live_recall_feed defaults to False so create_app() (used
+    # throughout the test suite) never makes a real network call — the
+    # actual running app (bottom of this file) turns it on. Either way the
+    # fetched-or-fallback recall is resolved once at startup, not per
+    # request, and its mode is surfaced in every response (C4).
+    recall_item, recall_mode = get_recall_item(attempt_live=attempt_live_recall_feed)
     app = FastAPI(title="Immigration Status Guardian — demo backend")
 
     @app.get("/api/sample-case")
@@ -134,10 +141,17 @@ def create_app(db_path: str = "data/demo.db") -> FastAPI:
 
     @app.post("/api/recalls/check")
     def recalls_check(req: RecallCheckRequest):
-        demo = _load_json("recall_demo.json")
-        receipt = demo["seeded_receipt"] if req.receipt == "seeded" else demo["unmatched_receipt"]
-        result = match_recall_to_receipt(demo["recall_item"], receipt)
-        return {"matched": result.matched, "message": result.message, "demo_scope": result.demo_scope}
+        receipts = _load_receipts()
+        receipt = receipts["seeded_receipt"] if req.receipt == "seeded" else receipts["unmatched_receipt"]
+        result = run_recall_check(store, clock_id="recall-clock", recall_item=recall_item, receipt=receipt)
+        return {
+            "mode": recall_mode,
+            "matched": result.match.matched,
+            "message": result.match.message,
+            "demo_scope": result.match.demo_scope,
+            "alert": {"decision": result.alert.decision, "reason": result.alert.reason},
+            "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+        }
 
     ui_dir = REPO_ROOT / "ui"
     if ui_dir.exists():
@@ -146,4 +160,4 @@ def create_app(db_path: str = "data/demo.db") -> FastAPI:
     return app
 
 
-app = create_app()
+app = create_app(attempt_live_recall_feed=True)

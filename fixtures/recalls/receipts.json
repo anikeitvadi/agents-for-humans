@@ -1,0 +1,15 @@
+{
+  "seeded_receipt": {
+    "receipt_id": "seeded-001",
+    "manufacturer": "Cambridge Audio",
+    "product_name": "Yoyo (M) Portable Bluetooth Speakers",
+    "purchase_date": "2024-06-01"
+  },
+  "unmatched_receipt": {
+    "receipt_id": "seeded-002",
+    "manufacturer": "Sony",
+    "product_name": "WF-1000XM5",
+    "purchase_date": "2024-06-01"
+  },
+  "note": "Synthetic receipts (invented purchase) for the real captured/live CPSC recall in agent/packs/recalls/feed.py — the seeded receipt's manufacturer/product_name are chosen to match that real recall exactly."
+}

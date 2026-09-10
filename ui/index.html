@@ -85,7 +85,7 @@
   </div>
 
   <div id="recall-card" class="card hidden">
-    <h2>Recall-to-remedy (demo-scope pack)</h2>
+    <h2 id="recall-heading">Recall-to-remedy (demo-scope pack)</h2>
     <div id="recall-body"></div>
   </div>
 </div>
@@ -177,6 +177,8 @@ async function runRecallDemo() {
   const unmatched = await fetch('/api/recalls/check', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'unmatched' })
   }).then(r => r.json());
+  const feedLabel = matched.mode === 'live' ? 'live CPSC feed' : 'captured-real fallback (feed unavailable)';
+  document.getElementById('recall-heading').textContent = `Recall-to-remedy — ${feedLabel}`;
   document.getElementById('recall-body').replaceChildren(
     el('div', { className: 'field-label', text: 'Seeded receipt' }),
     el('div', { className: 'field-value', text: `${matched.matched ? 'Matched' : 'No match'} — ${matched.message}` }),

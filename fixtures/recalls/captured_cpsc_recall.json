@@ -1,0 +1,13 @@
+{
+  "recall_id": "10948",
+  "manufacturer": "Cambridge Audio",
+  "product_name": "Yoyo (M) Portable Bluetooth Speakers",
+  "remedy_options": [
+    { "type": "refund", "amount": 218 },
+    { "type": "voucher", "amount": 350 }
+  ],
+  "source_url": "https://cpsc.gov/Recalls/2026/Audio-Partnership-Recalls-Cambridge-Audio-Yoyo-M-Portable-Bluetooth-Speakers-Due-to-Fire-Hazard",
+  "recall_date": "2026-09-03",
+  "captured_on": "2026-09-10",
+  "note": "Real CPSC recall (RecallID 10948, 'Audio Partnership Recalls Cambridge Audio Yoyo (M) Portable Bluetooth Speakers Due to Fire Hazard'), captured live from https://www.saferproducts.gov/RestWebServices/Recall on 2026-09-10 via agent/packs/recalls/feed.py. Used as the captured-but-real fallback when the live feed is unreachable during the demo — never a synthetic/invented recall. Remedy: full cash refund of $218 or a Cambridge Audio online store voucher of $350."
+}
