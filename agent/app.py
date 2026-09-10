@@ -14,8 +14,9 @@ from pydantic import BaseModel
 from agent.config import BEDROCK_MODEL_ID
 from agent.engine.decision_gate import GateInputs, evaluate_gate
 from agent.engine.store import Store
+from agent.llm.document_client import build_extraction_client
 from agent.llm.draft import build_bedrock_agent
-from agent.packs.immigration.pipeline import run_discrepancy_check
+from agent.packs.immigration.pipeline import extract_sample_case_fields, run_sample_case
 from agent.packs.recalls.rules import match_recall_to_receipt
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -37,20 +38,39 @@ def create_app(db_path: str = "data/demo.db") -> FastAPI:
     # pipeline's deterministic core is a fully correct draft either way; a
     # real Agent only adds personalization when Bedrock is actually reachable.
     bedrock_agent = build_bedrock_agent(model_id=BEDROCK_MODEL_ID)
+    # "live" only when real AWS credentials are configured; otherwise a
+    # deterministic recorded replay of the same specimen images (C1) — the
+    # mode is surfaced in every response below so the UI never presents a
+    # recorded replay as a live parse.
+    extraction_client, extraction_mode = build_extraction_client()
     app = FastAPI(title="Immigration Status Guardian — demo backend")
 
     @app.get("/api/sample-case")
     def sample_case():
-        return _load_json("fields.json")
+        extraction = extract_sample_case_fields(extraction_client, mode=extraction_mode, model_id=BEDROCK_MODEL_ID)
+        return {
+            "mode": extraction.mode,
+            "fields": extraction.fields,
+            "evidence": extraction.evidence,
+            "statuses": extraction.statuses,
+            "needs_review": extraction.needs_review,
+        }
 
     @app.post("/api/process-sample-case")
     def process_sample_case():
-        fields = _load_json("fields.json")
-        result = run_discrepancy_check(
-            store, clock_id="demo-clock", event_id="demo-event", fields=fields, agent=bedrock_agent
+        result = run_sample_case(
+            store,
+            clock_id="demo-clock",
+            event_id="demo-event",
+            client=extraction_client,
+            mode=extraction_mode,
+            model_id=BEDROCK_MODEL_ID,
+            agent=bedrock_agent,
         )
         return {
-            "alert": {"decision": result.alert.decision, "reason": result.alert.reason},
+            "mode": result.extraction.mode,
+            "error": result.error,
+            "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
             "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
         }
 

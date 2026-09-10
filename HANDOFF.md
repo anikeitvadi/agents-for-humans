@@ -1,5 +1,15 @@
 # Handoff (updated 2026-09-10 PM)
 
+**C1 done (2026-09-10) — real sample-document extraction wired end to end:**
+- Three synthetic specimen-format images generated (`fixtures/sample_case/generate_specimens.py` → `fixtures/sample_case/specimens/{i94,i797,passport}.png`), coherent invented identity/dates across all three (matches the existing 55-day discrepancy beat).
+- `agent/llm/document_client.py` (new): picks a live `bedrock-runtime` client when AWS credentials are configured, else `RecordedResponseClient` replaying `fixtures/sample_case/recorded_extraction_response.json` — either way the real `extract_fields()` validation logic (F2/F4 fixes included) runs unchanged; only the Converse response source differs. Every result carries an explicit `mode: "live"|"recorded"` label.
+- `agent/packs/immigration/pipeline.py`: added `extract_sample_case_fields()` (runs extraction against all 3 specimens) and `run_sample_case()` (extraction → discrepancy rule → gate → draft; blocks the rule and returns `error` instead of running date math on an unreviewed/missing field).
+- `agent/app.py`: `/api/sample-case` and `/api/process-sample-case` now run this real pipeline instead of reading a pre-extracted JSON fixture directly; both responses include `mode`. The stale `fixtures/sample_case/fields.json` was removed (superseded by the specimens + recorded response).
+- `ui/index.html`: parse step shows the live/recorded mode and per-field status (missing/ambiguous), and the result card handles the new `error` (extraction-blocked) case.
+- New live integration test (`tests/test_live_extraction.py`, `@pytest.mark.live`, excluded from the default run via `pyproject.toml`'s `-m "not live"`) — reads the real specimen bytes through live Bedrock when credentials exist; skips cleanly otherwise. Not yet run against real AWS in this session (no credentials in this sandbox).
+- Verified: `.venv/bin/python -m pytest -q` → 74 passed, 3 deselected (live). Also smoke-tested via `uvicorn` + `curl` — both endpoints return correct fields/evidence/mode and a correct 55-day-gap draft. Could **not** visually verify in an actual browser (Chrome extension not connected in this environment) — JS syntax-checked with `node --check` and the F5 HTML-injection regression tests still pass, but a real browser check is still outstanding.
+- Next: C2 (persistent case/draft lifecycle), then C3 (bulletin poll), then C4 (recall through shared engine) — in progress this session.
+
 **F1–F5 fixed (2026-09-10), TDD throughout (regression test written and confirmed RED before each fix):**
 - F1: `check_bulletin_cutoff` now requires priority date strictly before the cutoff (`<`, not `<=`); equality is `not_current`.
 - F2: `extract_fields` now requires and sends `modelId` to Bedrock Converse. Added a botocore-schema-validating fake client (`tests/test_extraction.py`) so a missing required request param fails the suite, not just live calls.

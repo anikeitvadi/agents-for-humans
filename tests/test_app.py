@@ -15,8 +15,12 @@ def test_sample_case_endpoint_returns_fields_with_evidence(tmp_path):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["admit_until"] == "2026-11-03"
-    assert "evidence" in body
+    assert body["fields"]["admit_until"] == "2026-11-03"
+    assert body["evidence"]["admit_until"] == "Admit Until Date: 11/03/2026"
+    assert body["needs_review"] is False
+    # No AWS credentials in the test environment: extraction replays the
+    # recorded response, and must say so rather than claim a live parse.
+    assert body["mode"] == "recorded"
 
 
 def test_process_sample_case_surfaces_discrepancy_with_draft(tmp_path):
@@ -29,6 +33,8 @@ def test_process_sample_case_surfaces_discrepancy_with_draft(tmp_path):
     assert body["alert"]["decision"] == "surfaced"
     assert body["draft"] is not None
     assert "55" in body["draft"]["body"]
+    assert body["mode"] == "recorded"
+    assert body["error"] is None
 
 
 def test_reprocessing_sample_case_does_not_surface_twice(tmp_path):
