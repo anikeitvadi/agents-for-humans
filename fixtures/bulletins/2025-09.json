@@ -1,0 +1,24 @@
+{
+  "dos_bulletin": {
+    "chart_type": "final_action",
+    "month": "2025-09",
+    "cutoffs": { "EB2-India": "2013-01-01" },
+    "source_provenance": {
+      "url": "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/2025/visa-bulletin-for-september-2025.html",
+      "note": "The primary travel.state.gov page returned HTTP 403 to automated fetching in this session; the EB2-India Final Action Date value below is corroborated by independent legal-industry coverage of the same September 2025 bulletin (see verification_sources). Replace with a direct capture of the primary page if/when it becomes fetchable.",
+      "verification_sources": [
+        "https://www.aila.org/library/uscis-adjustment-of-status-filing-dates-for-september-2025",
+        "https://www.morganlewis.com/pubs/2025/08/us-department-of-state-releases-september-2025-visa-bulletin"
+      ],
+      "verified_on": "2026-09-10"
+    }
+  },
+  "uscis_chart_selection": {
+    "month": "2025-09",
+    "designated_chart_type": "final_action",
+    "source_provenance": {
+      "url": "https://www.uscis.gov/green-card/green-card-processes-and-procedures/visa-availability-priority-dates/when-to-file-your-adjustment-of-status-application-for-family-sponsored-or-employment-based-116",
+      "verified_on": "2026-09-10"
+    }
+  }
+}

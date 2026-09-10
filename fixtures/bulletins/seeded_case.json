@@ -1,0 +1,7 @@
+{
+  "case_name": "Sample Bulletin Case — EB2-India",
+  "priority_date": "2013-06-15",
+  "category": "EB2-India",
+  "chargeability": "India",
+  "note": "Synthetic case: an invented priority date and person, evaluated against the real September/October 2025 DOS bulletin + USCIS chart-selection data in this directory. Not a real applicant. 2013-06-15 is chosen to fall after September 2025's Final Action cutoff (2013-01-01, not current) and before October 2025's Dates for Filing cutoff (2013-12-01, current) — the unattended beat's not-current-to-current transition."
+}

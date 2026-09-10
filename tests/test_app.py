@@ -60,6 +60,41 @@ def test_sample_case_draft_survives_across_app_restarts(tmp_path):
     assert replayed.json()["draft"] == first.json()["draft"]
 
 
+def test_bulletin_poll_september_stays_silent_then_october_surfaces_unattended(tmp_path):
+    client = _client(tmp_path)
+
+    september = client.post("/api/bulletin-poll", json={"month": "2025-09"})
+    october = client.post("/api/bulletin-poll", json={"month": "2025-10"})
+
+    assert september.json()["cutoff_status"] == "not_current"
+    assert september.json()["alert"]["decision"] == "silent"
+    assert september.json()["draft"] is None
+
+    assert october.json()["cutoff_status"] == "current"
+    assert october.json()["alert"]["decision"] == "surfaced"
+    assert october.json()["draft"] is not None
+
+
+def test_bulletin_poll_repeat_produces_no_second_ping(tmp_path):
+    client = _client(tmp_path)
+
+    first = client.post("/api/bulletin-poll", json={"month": "2025-10"})
+    second = client.post("/api/bulletin-poll", json={"month": "2025-10"})
+
+    assert second.json()["alert"]["decision"] == "silent"
+    assert second.json()["draft"] == first.json()["draft"]
+
+
+def test_bulletin_poll_missing_month_produces_visible_error_not_a_crash(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/bulletin-poll", json={"month": "2099-01"})
+
+    assert response.status_code == 200
+    assert response.json()["error"] is not None
+    assert response.json()["alert"] is None
+
+
 def test_gate_demo_endpoint_shows_two_silent_one_surfaced(tmp_path):
     client = _client(tmp_path)
 

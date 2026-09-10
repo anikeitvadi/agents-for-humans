@@ -16,6 +16,7 @@ from agent.engine.decision_gate import GateInputs, evaluate_gate
 from agent.engine.store import Store
 from agent.llm.document_client import build_extraction_client
 from agent.llm.draft import build_bedrock_agent
+from agent.packs.immigration.bulletin import load_seeded_case, run_bulletin_poll
 from agent.packs.immigration.pipeline import extract_sample_case_fields, run_sample_case
 from agent.packs.recalls.rules import match_recall_to_receipt
 
@@ -29,6 +30,17 @@ def _load_json(name: str) -> dict:
 
 class RecallCheckRequest(BaseModel):
     receipt: str  # "seeded" or "unmatched" — picks a fixture receipt for the demo
+
+
+class BulletinPollRequest(BaseModel):
+    month: str  # "2025-09" or "2025-10" — which captured bulletin month to simulate polling
+
+
+# The immediately preceding captured month, keyed by month — lets the poll
+# skip a same-chart-type retrogression comparison correctly (see
+# fixtures/bulletins/README.md) without guessing at calendar arithmetic
+# over a fixture set that may not cover every month.
+_PRIOR_BULLETIN_MONTH = {"2025-10": "2025-09"}
 
 
 def create_app(db_path: str = "data/demo.db") -> FastAPI:
@@ -97,6 +109,28 @@ def create_app(db_path: str = "data/demo.db") -> FastAPI:
             alert = evaluate_gate(inputs)
             results.append({"label": s["label"], "decision": alert.decision, "reason": alert.reason})
         return {"results": results}
+
+    @app.post("/api/bulletin-poll")
+    def bulletin_poll(req: BulletinPollRequest):
+        """Simulates the unattended scheduled poll firing for one captured
+        bulletin month (C3) — no user upload involved, same shared engine/
+        gate/persistence/draft path as the discrepancy check."""
+        case = load_seeded_case()
+        result = run_bulletin_poll(
+            store,
+            clock_id="bulletin-clock",
+            month=req.month,
+            case=case,
+            agent=bedrock_agent,
+            previous_month=_PRIOR_BULLETIN_MONTH.get(req.month),
+        )
+        return {
+            "case_name": case.case_name,
+            "error": result.error,
+            "cutoff_status": result.cutoff.status if result.cutoff else None,
+            "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
+            "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+        }
 
     @app.post("/api/recalls/check")
     def recalls_check(req: RecallCheckRequest):
