@@ -3,172 +3,500 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Immigration Status Guardian — demo</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<title>Immigration Status Guardian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.44.0/dist/umd/lucide.min.js" defer></script>
 <style>
   :root {
-    --ground: #F3F5F7; --surface: #FFFFFF; --ink: #1B2430; --ink-2: #4A5563; --ink-3: #6B7785;
-    --rule: #D9DEE4; --accent: #0F6E56; --accent-soft: #E1F1EA; --amber: #9A6A12; --amber-soft: #F6ECD3;
+    --bg: #10151B;
+    --surface: #171E27;
+    --surface-raised: #202A35;
+    --ink: #E7EDF3;
+    --ink-2: #A7B3BF;
+    --ink-3: #6B7785;
+    --rule: #29333F;
+    --accent: #58BFA9;
+    --accent-wash: rgba(88, 191, 169, 0.14);
+    --review: #D8B16A;
+    --review-wash: rgba(216, 177, 106, 0.14);
     --mono: "IBM Plex Mono", ui-monospace, monospace;
     --sans: "IBM Plex Sans", -apple-system, sans-serif;
-    --display: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --ground: #0F1418; --surface: #171D23; --ink: #E8ECF0; --ink-2: #B6BFC9; --ink-3: #8592A0;
-      --rule: #2A333D; --accent: #3DBB93; --accent-soft: #14312A; --amber: #E0B24F; --amber-soft: #33290F; }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 18px 64px; }
-  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
-  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 5vw, 36px); margin: 6px 0 4px; }
-  .lede { color: var(--ink-2); max-width: 62ch; margin: 0 0 22px; }
-  button { font: 600 14px var(--sans); padding: 10px 18px; border-radius: 6px; border: 1px solid var(--accent);
-    background: var(--accent); color: #fff; cursor: pointer; }
-  button.secondary { background: var(--surface); color: var(--ink); border-color: var(--rule); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
-  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; margin-bottom: 16px; }
-  .card h2 { font-family: var(--display); font-size: 16px; margin: 0 0 10px; }
-  .evidence { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); background: var(--ground);
-    border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; margin: 4px 0 10px; }
-  .field-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
-  .field-value { font-weight: 600; margin: 2px 0 2px; }
-  .one-thing { border-left: 4px solid var(--accent); }
-  .one-thing .badge { display: inline-block; font-family: var(--mono); font-size: 11px; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 999px; margin-bottom: 8px; }
-  .draft-body { white-space: pre-wrap; font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); margin-top: 10px; padding-top: 10px; }
-  .gate-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
-  .gate-row:last-child { border-bottom: none; }
-  .pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-  .pill.surfaced { background: var(--accent-soft); color: var(--accent); }
-  .pill.silent { background: var(--rule); color: var(--ink-3); }
-  .disclaimer { font-size: 12.5px; color: var(--amber); background: var(--amber-soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 20px; }
   .hidden { display: none; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  /* Header */
+  .top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px;
+    padding-bottom: 14px; margin-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  .top-identity { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .product-name { font-size: 15px; font-weight: 600; }
+  .top-meta { font-size: 13px; color: var(--ink-3); }
+  .tabs { display: flex; gap: 22px; }
+  .tab { font: 500 14px var(--sans); background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--ink-3); padding: 6px 0; cursor: pointer; }
+  .tab.active { color: var(--ink); font-weight: 600; border-color: var(--accent); }
+
+  .legal-note { font-size: 12.5px; color: var(--ink-3); border-left: 2px solid var(--review); padding: 2px 0 2px 10px;
+    margin: 16px 0 24px; max-width: 62ch; }
+
+  /* Review hero */
+  .review { margin-bottom: 34px; }
+  .review-empty { color: var(--ink-2); max-width: 56ch; font-size: 14.5px; }
+  .review-empty strong { color: var(--ink); font-weight: 600; }
+
+  .status-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+    padding: 4px 10px 4px 8px; border-radius: 999px; margin-bottom: 14px; }
+  .status-chip svg { width: 13px; height: 13px; }
+  .status-chip.tone-review { background: var(--review-wash); color: var(--review); }
+  .status-chip.tone-quiet { background: var(--accent-wash); color: var(--accent); }
+  .status-chip.tone-routine { background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+
+  .review-headline { font-size: 25px; font-weight: 700; line-height: 1.3; margin: 0 0 20px; max-width: 30ch; }
+
+  .comparison { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+  .comparison-doc { flex: 0 0 auto; min-width: 0; padding: 12px 16px; border-radius: 8px; background: var(--surface);
+    cursor: pointer; border: 1px solid transparent; transition: border-color 150ms ease; }
+  .comparison-doc:hover, .comparison-doc:focus-visible { border-color: var(--rule); }
+  .comparison-label { display: block; font-size: 12.5px; color: var(--ink-3); margin-bottom: 4px; }
+  .comparison-date { display: block; font-family: var(--mono); font-size: 16px; font-weight: 500; border-radius: 4px;
+    padding: 1px 2px; margin: -1px -2px; }
+  .comparison-connector { flex: 1; position: relative; height: 1px; background: var(--rule); transform: scaleX(0); transform-origin: left; }
+  .comparison-gap { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--surface-raised);
+    color: var(--review); padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; }
+
+  .review-note { color: var(--ink-2); font-size: 14px; max-width: 56ch; margin: 0 0 18px; }
+
+  .review-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .btn-primary { font: 600 14px var(--sans); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent);
+    background: var(--accent); color: #0A1310; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-link { font: 500 13.5px var(--sans); background: none; border: none; color: var(--ink-2); cursor: pointer;
+    padding: 0; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+  .btn-link:hover { color: var(--ink); }
+
+  /* Workspace: main + support columns */
+  .workspace { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-bottom: 34px; }
+  @media (max-width: 860px) { .workspace { grid-template-columns: 1fr; } }
+
+  h2.section-heading { font-size: 13.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 12px; }
+
+  .doc-list { display: flex; flex-direction: column; gap: 10px; }
+  .doc-card { background: var(--surface); border-radius: 8px; padding: 12px 14px; cursor: pointer;
+    border: 1px solid transparent; transition: border-color 150ms ease; }
+  .doc-card:hover, .doc-card:focus-visible { border-color: var(--rule); }
+  .doc-card-head { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
+  .doc-card-head svg { width: 15px; height: 15px; color: var(--ink-3); flex: none; }
+  .doc-card-date { font-family: var(--mono); font-size: 14px; margin-bottom: 6px; }
+  .doc-card-evidence { font-family: var(--mono); font-size: 12px; color: var(--ink-3); background: var(--bg);
+    border-radius: 4px; padding: 6px 8px; }
+
+  /* Activity */
+  .activity-empty { color: var(--ink-3); font-size: 13.5px; }
+  .activity-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--rule);
+    background: none; border-left: none; border-right: none; border-top: none; width: 100%; text-align: left; font: inherit;
+    color: inherit; cursor: default; }
+  .activity-row.clickable { cursor: pointer; }
+  .activity-row:last-child { border-bottom: none; }
+  .activity-row svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+  .activity-row.tone-review svg { color: var(--review); }
+  .activity-row.tone-quiet svg { color: var(--accent); }
+  .activity-row.tone-routine svg { color: var(--ink-3); }
+  .activity-main { flex: 1; min-width: 0; }
+  .activity-label { font-size: 14px; font-weight: 500; }
+  .activity-status { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+  .activity-detail { margin-top: 6px; }
+  .activity-detail summary { font-size: 12px; color: var(--ink-3); cursor: pointer; }
+  .activity-detail-body { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+
+  /* Demo controls */
+  details.demo-controls { border-top: 1px solid var(--rule); padding-top: 14px; }
+  details.demo-controls summary { font-size: 13px; color: var(--ink-3); cursor: pointer; user-select: none; }
+  details.demo-controls summary:hover { color: var(--ink-2); }
+  .demo-note { font-size: 12.5px; color: var(--ink-3); max-width: 60ch; margin: 12px 0; }
+  .demo-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .btn-quiet { font: 500 13px var(--sans); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule);
+    background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .btn-quiet:hover { color: var(--ink); border-color: var(--ink-3); }
+
+  .gate-illustration { margin-top: 14px; }
+  .gate-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px;
+    border-bottom: 1px solid var(--rule); }
+  .gate-row:last-child { border-bottom: none; }
+  .gate-pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .gate-pill.tone-review { background: var(--review-wash); color: var(--review); }
+  .gate-pill.tone-routine { background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+
+  /* Draft side panel */
+  .overlay { position: fixed; inset: 0; background: rgba(6, 9, 12, 0.6); display: flex; justify-content: flex-end;
+    z-index: 10; opacity: 0; pointer-events: none; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .overlay-panel { width: min(440px, 92vw); height: 100%; background: var(--surface-raised); padding: 24px 26px;
+    overflow-y: auto; transform: translateX(100%); box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35); }
+  .overlay-close { font: 500 13px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
+    border-radius: 6px; padding: 5px 11px; cursor: pointer; margin-bottom: 18px; }
+  .overlay-subject { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .overlay-mode { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
+  .overlay-body { white-space: pre-wrap; font-size: 14px; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.001ms !important; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="eyebrow">Agents for Humans · demo build</div>
-  <h1>Immigration Status Guardian</h1>
-  <p class="lede">One engine that reads the government so you don't have to. This flags a <strong>document-date discrepancy</strong> for your attorney's review — it never determines your lawful status.</p>
-  <div class="disclaimer">Not legal advice. Every result here is a flag for your attorney, never a status or eligibility determination.</div>
+<div class="shell">
+  <header class="top">
+    <div class="top-identity">
+      <span class="product-name">Immigration Status Guardian</span>
+      <span class="top-meta" id="top-meta">Sample case</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" id="tab-case" role="tab" aria-selected="true">Case review</button>
+      <button class="tab" id="tab-recall" role="tab" aria-selected="false">Recall demo</button>
+    </nav>
+  </header>
 
-  <div class="row">
-    <button id="load-btn">Load sample case</button>
-    <button id="gate-btn" class="secondary">Show decision gate</button>
-    <button id="recall-btn" class="secondary">Run recall demo</button>
-  </div>
-  <div class="row">
-    <button id="bulletin-sep-btn" class="secondary">Poll bulletin: September 2025</button>
-    <button id="bulletin-oct-btn" class="secondary">Poll bulletin: October 2025 (unattended)</button>
-  </div>
+  <p class="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
 
-  <div id="parse-card" class="card hidden">
-    <h2 id="parse-heading">Parse step</h2>
-    <div id="parse-fields"></div>
-  </div>
+  <main id="panel-case" class="panel">
+    <section class="review" id="review">
+      <div class="review-empty" id="review-empty">
+        <p>Expand <strong>Demo controls</strong> below and load the sample case to see how a document-date discrepancy gets flagged for attorney review.</p>
+      </div>
+      <div class="review-loaded hidden" id="review-loaded">
+        <div class="status-chip" id="review-status"></div>
+        <h1 class="review-headline" id="review-headline"></h1>
+        <div class="comparison" id="comparison">
+          <div class="comparison-doc" id="comparison-doc-i94" tabindex="0" role="button">
+            <span class="comparison-label">I-94 admit-until date</span>
+            <span class="comparison-date" id="date-admit_until"></span>
+          </div>
+          <div class="comparison-connector" id="comparison-connector">
+            <span class="comparison-gap" id="comparison-gap"></span>
+          </div>
+          <div class="comparison-doc" id="comparison-doc-i797" tabindex="0" role="button">
+            <span class="comparison-label">I-797 valid-until date</span>
+            <span class="comparison-date" id="date-i797_valid_until"></span>
+          </div>
+        </div>
+        <p class="review-note" id="review-note"></p>
+        <div class="review-actions">
+          <button class="btn-primary" id="open-draft-btn"></button>
+          <button class="btn-link" id="view-docs-btn">View source documents</button>
+        </div>
+      </div>
+    </section>
 
-  <div id="result-card" class="card one-thing hidden">
-    <span class="badge">One thing needs you</span>
-    <div id="result-body"></div>
-  </div>
+    <div class="workspace">
+      <section>
+        <h2 class="section-heading">Recent monitoring activity</h2>
+        <div class="activity-empty" id="activity-empty">No activity yet — load the sample case or replay a bulletin update below.</div>
+        <div id="activity-list"></div>
+      </section>
+      <aside>
+        <h2 class="section-heading">Documents</h2>
+        <div class="doc-list" id="doc-list"></div>
+      </aside>
+    </div>
 
-  <div id="bulletin-card" class="card hidden">
-    <h2 id="bulletin-heading">Visa bulletin poll</h2>
-    <div id="bulletin-body"></div>
-  </div>
+    <details class="demo-controls">
+      <summary>Demo controls</summary>
+      <p class="demo-note">These buttons simulate what would otherwise happen automatically — a user uploading documents, or a scheduled check of the government's visa bulletin — so the demo doesn't need a real upload or a real publication date.</p>
+      <div class="demo-buttons">
+        <button class="btn-quiet" id="load-btn">Load sample case</button>
+        <button class="btn-quiet" id="gate-btn">Inspect decision gate</button>
+        <button class="btn-quiet" id="bulletin-sep-btn">Replay September update</button>
+        <button class="btn-quiet" id="bulletin-oct-btn">Replay October update</button>
+      </div>
+      <div class="gate-illustration hidden" id="gate-illustration">
+        <h2 class="section-heading" style="margin-top:16px">How the decision gate filters events</h2>
+        <div id="gate-rows"></div>
+      </div>
+    </details>
+  </main>
 
-  <div id="gate-card" class="card hidden">
-    <h2>Decision gate — quiet unless it matters</h2>
-    <div id="gate-rows"></div>
-  </div>
+  <main id="panel-recall" class="panel hidden">
+    <section class="review">
+      <div class="review-empty" id="recall-empty">
+        <p>Expand <strong>Demo controls</strong> below to run the recall-matching demo against a real product recall.</p>
+      </div>
+      <div class="review-loaded hidden" id="recall-loaded">
+        <div class="status-chip" id="recall-status"></div>
+        <h1 class="review-headline" id="recall-headline"></h1>
+        <p class="review-note" id="recall-note"></p>
+        <div class="review-actions">
+          <button class="btn-primary" id="open-recall-draft-btn"></button>
+        </div>
+      </div>
+    </section>
 
-  <div id="recall-card" class="card hidden">
-    <h2 id="recall-heading">Recall-to-remedy (demo-scope pack)</h2>
-    <div id="recall-body"></div>
+    <section style="margin-bottom: 34px">
+      <h2 class="section-heading">Recent monitoring activity</h2>
+      <div class="activity-empty" id="recall-activity-empty">No activity yet — run the recall demo below.</div>
+      <div id="recall-activity-list"></div>
+    </section>
+
+    <details class="demo-controls">
+      <summary>Demo controls</summary>
+      <p class="demo-note">Matches one real, live product recall against a seeded receipt and an unmatched receipt, to prove the same watch-and-notify engine used for immigration works on an unrelated domain. Demo-scope exact match, not a general-purpose matcher.</p>
+      <div class="demo-buttons">
+        <button class="btn-quiet" id="recall-btn">Run recall demo</button>
+      </div>
+    </details>
+  </main>
+</div>
+
+<div class="overlay" id="draft-overlay">
+  <div class="overlay-panel" id="draft-panel">
+    <button class="overlay-close" id="draft-close">Close</button>
+    <p class="overlay-subject" id="draft-subject"></p>
+    <p class="overlay-mode" id="draft-mode"></p>
+    <p class="overlay-body" id="draft-body"></p>
   </div>
 </div>
 
 <script>
+// Core interactivity (button wiring, tab switching, all fetch/render logic)
+// must never depend on an external CDN resolving — Lucide icons and Motion
+// animations are loaded separately and treated as optional enhancements
+// (see the two small loader scripts below and icon()/fx()'s fallbacks), so
+// a slow or unreachable CDN degrades the page's polish, never its function.
+
 // Dynamic values (API/model text) always go through textContent, never
 // innerHTML — a draft or evidence string containing markup must render as
-// literal text, not be parsed as HTML (F5).
-function el(tag, { className, text, style } = {}) {
+// literal text, not be parsed as HTML (F5). el() is the one place strings
+// become DOM content, and it always uses textContent.
+function el(tag, { className, text, id } = {}) {
   const node = document.createElement(tag);
   if (className) node.className = className;
+  if (id) node.id = id;
   if (text !== undefined) node.textContent = text;
-  if (style) Object.assign(node.style, style);
   return node;
 }
 
-async function loadSampleCase() {
-  const data = await fetch('/api/sample-case').then(r => r.json());
-  const parseCard = document.getElementById('parse-card');
-  const modeLabel = data.mode === 'live' ? 'live Bedrock parse' : 'recorded replay (no AWS credentials configured)';
-  document.getElementById('parse-heading').textContent = `Parse step — ${modeLabel}`;
-  const parseFields = document.getElementById('parse-fields');
-  parseFields.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].flatMap(key => {
-    const status = data.statuses[key];
-    const value = data.fields[key] ?? `(${status})`;
-    return [
-      el('div', { className: 'field-label', text: status === 'extracted' ? key : `${key} — ${status}` }),
-      el('div', { className: 'field-value', text: value }),
-      el('div', { className: 'evidence', text: data.evidence[key] || '(no evidence)' }),
-    ];
-  }));
-  parseCard.classList.remove('hidden');
-
-  const result = await fetch('/api/process-sample-case', { method: 'POST' }).then(r => r.json());
-  const resultCard = document.getElementById('result-card');
-  const resultBody = document.getElementById('result-body');
-  if (result.error) {
-    resultBody.replaceChildren(el('div', { className: 'field-value', text: `Needs review: ${result.error}` }));
-  } else if (result.draft) {
-    // A draft here means either a brand-new surfaced alert, or an
-    // unresolved draft retrieved from a prior surfaced alert (C2) — either
-    // way there is still one thing that needs the user, even if this
-    // particular call produced no new ping.
-    const draftBody = el('div', { className: 'draft-body' });
-    draftBody.append(el('strong', { text: result.draft.subject }), document.createTextNode('\n\n' + result.draft.body));
-    resultBody.replaceChildren(el('div', { className: 'field-value', text: result.alert.reason }), draftBody);
-  } else {
-    resultBody.replaceChildren(el('div', { className: 'field-value', text: `Silent: ${result.alert.reason}` }));
-  }
-  resultCard.classList.remove('hidden');
+function icon(name) {
+  const node = document.createElement('i');
+  node.setAttribute('data-lucide', name);
+  return node;
 }
 
-async function pollBulletin(month) {
+function renderIcons() {
+  if (window.lucide) window.lucide.createIcons();
+}
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fx(target, keyframes, options) {
+  // Respecting reduced motion means skipping the animation, not the result:
+  // apply each property's final keyframe value instantly instead. The same
+  // fallback covers Motion not having loaded yet (see the loader module at
+  // the end of the file) — the UI is always visually correct either way.
+  if (reduceMotion || !window.__motionAnimate) {
+    const node = typeof target === 'string' ? document.querySelector(target) : target;
+    for (const [prop, values] of Object.entries(keyframes)) {
+      node.style[prop] = Array.isArray(values) ? values[values.length - 1] : values;
+    }
+    return;
+  }
+  return window.__motionAnimate(target, keyframes, options);
+}
+
+const FIELD_LABELS = {
+  admit_until: 'I-94 admit-until date',
+  i797_valid_until: 'I-797 valid-until date',
+  passport_expiry: 'Passport expiry date',
+};
+const DOC_NAMES = { admit_until: 'Form I-94', i797_valid_until: 'Form I-797', passport_expiry: 'Passport' };
+
+// Every internal reason/decision string is translated to what the user
+// actually needs to know — "failed: novelty" or "surfaced" describe the
+// system's internals, not an outcome a person can act on.
+function describeOutcome(decision, hasDraft) {
+  if (decision === 'surfaced') return { label: 'Needs review', tone: 'review', icon: 'circle-alert' };
+  if (hasDraft) return { label: 'Already flagged · Draft available', tone: 'routine', icon: 'check-circle' };
+  return { label: 'No new notification', tone: 'quiet', icon: 'circle-check' };
+}
+
+function statusChip(container, { label, tone, icon: iconName }) {
+  container.className = `status-chip tone-${tone}`;
+  container.replaceChildren(icon(iconName), el('span', { text: label }));
+}
+
+// The header's meta text is per-tab (each tab has its own mode label), so
+// switching tabs must restore whichever label that tab last set rather
+// than showing the other tab's mode.
+let caseMetaLabel = 'Sample case';
+let recallMetaLabel = 'Recall demo';
+function updateTopMeta() {
+  document.getElementById('top-meta').textContent = tabCase.classList.contains('active') ? caseMetaLabel : recallMetaLabel;
+}
+
+function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
+  emptyEl.classList.add('hidden');
+  const row = el(onOpen ? 'button' : 'div', { className: `activity-row tone-${outcome.tone}${onOpen ? ' clickable' : ''}` });
+  const main = el('div', { className: 'activity-main' });
+  main.append(el('div', { className: 'activity-label', text: label }), el('div', { className: 'activity-status', text: outcome.label }));
+  if (detail) {
+    const d = el('details', { className: 'activity-detail' });
+    d.append(el('summary', { text: 'Technical detail' }), el('div', { className: 'activity-detail-body', text: detail }));
+    main.append(d);
+  }
+  const toneIcon = { review: 'circle-alert', quiet: 'circle-check', routine: 'check-circle' };
+  row.append(icon(outcome.icon || toneIcon[outcome.tone] || 'circle'), main);
+  if (onOpen) row.addEventListener('click', onOpen);
+  listEl.prepend(row);
+  renderIcons();
+}
+
+// --- Draft side panel (shared by both tabs) -------------------------------
+
+const overlay = document.getElementById('draft-overlay');
+const overlayPanel = document.getElementById('draft-panel');
+function openDraft(draft, modeLabel) {
+  document.getElementById('draft-subject').textContent = draft.subject;
+  document.getElementById('draft-mode').textContent = modeLabel || '';
+  document.getElementById('draft-body').textContent = draft.body;
+  overlay.classList.add('open');
+  fx(overlayPanel, { transform: ['translateX(100%)', 'translateX(0%)'] }, { duration: 0.35, easing: 'ease-out' });
+}
+
+function closeDraft() {
+  const done = () => overlay.classList.remove('open');
+  const anim = fx(overlayPanel, { transform: ['translateX(0%)', 'translateX(100%)'] }, { duration: 0.25, easing: 'ease-in' });
+  if (anim && anim.finished) anim.finished.then(done); else done();
+}
+
+document.getElementById('draft-close').addEventListener('click', closeDraft);
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDraft(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeDraft(); });
+
+// --- Case review tab --------------------------------------------------------
+
+async function loadSampleCase() {
+  const extraction = await fetch('/api/sample-case').then(r => r.json());
+  const modeLabel = extraction.mode === 'live' ? 'Live Bedrock parse' : 'Recorded demo';
+  caseMetaLabel = `Sample case · ${modeLabel}`;
+  updateTopMeta();
+
+  const docList = document.getElementById('doc-list');
+  docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map(key => {
+    const status = extraction.statuses[key];
+    const value = extraction.fields[key] ?? `Needs review (${status})`;
+    const card = el('div', { className: 'doc-card', id: `doc-card-${key}` });
+    card.tabIndex = 0;
+    const head = el('div', { className: 'doc-card-head' });
+    head.append(icon('file-text'), el('span', { text: DOC_NAMES[key] }));
+    card.append(head, el('div', { className: 'doc-card-date', text: value }),
+      el('div', { className: 'doc-card-evidence', text: extraction.evidence[key] || '(no evidence)' }));
+    const highlight = () => highlightDate(key);
+    card.addEventListener('click', highlight);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); highlight(); } });
+    return card;
+  }));
+  renderIcons();
+
+  const result = await fetch('/api/process-sample-case', { method: 'POST' }).then(r => r.json());
+  const reviewEmpty = document.getElementById('review-empty');
+  const reviewLoaded = document.getElementById('review-loaded');
+  reviewEmpty.classList.add('hidden');
+  reviewLoaded.classList.remove('hidden');
+
+  if (result.error) {
+    statusChip(document.getElementById('review-status'), { label: 'Needs review', tone: 'review', icon: 'circle-alert' });
+    document.getElementById('review-headline').textContent = 'Document extraction needs review';
+    document.getElementById('comparison').style.display = 'none';
+    document.getElementById('review-note').textContent = result.error;
+    document.getElementById('open-draft-btn').style.display = 'none';
+    addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
+      { label: 'Document review — I-94 vs I-797', outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
+    return;
+  }
+
+  const outcome = describeOutcome(result.alert.decision, !!result.draft);
+  statusChip(document.getElementById('review-status'), outcome);
+
+  document.getElementById('date-admit_until').textContent = extraction.fields.admit_until;
+  document.getElementById('date-i797_valid_until').textContent = extraction.fields.i797_valid_until;
+
+  if (result.draft) {
+    // The rule's own message states the gap in words; pull the headline
+    // number from it rather than recomputing date math in the browser.
+    const gapWords = result.draft.body.match(/disagree by (\d+) day/);
+    const gapText = gapWords ? `${gapWords[1]} days` : 'a discrepancy';
+    document.getElementById('review-headline').textContent = `Your document dates differ by ${gapText}`;
+    document.getElementById('comparison-gap').textContent = gapText;
+    document.getElementById('review-note').textContent = 'Review this discrepancy with your attorney.';
+    const openBtn = document.getElementById('open-draft-btn');
+    openBtn.replaceChildren(icon('mail'), document.createTextNode('Review attorney draft'));
+    openBtn.onclick = () => openDraft(result.draft, modeLabel);
+    openBtn.style.display = '';
+
+    fx(document.getElementById('comparison-connector'), { transform: ['scaleX(0)', 'scaleX(1)'] }, { duration: 0.4, easing: 'ease-out' });
+    fx(document.getElementById('comparison-gap'), { opacity: [0, 1] }, { duration: 0.3, delay: 0.25 });
+  } else {
+    document.getElementById('review-headline').textContent = 'No discrepancy found';
+    document.getElementById('review-note').textContent = 'The I-94 admit-until date matches the I-797 validity end date.';
+    document.getElementById('open-draft-btn').style.display = 'none';
+    fx(document.getElementById('comparison-connector'), { transform: ['scaleX(0)', 'scaleX(1)'] }, { duration: 0.4, easing: 'ease-out' });
+  }
+
+  addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
+    label: 'Document review — I-94 vs I-797',
+    outcome,
+    detail: result.alert.reason,
+    onOpen: result.draft ? () => openDraft(result.draft, modeLabel) : null,
+  });
+}
+
+function highlightDate(key) {
+  const dateEl = document.getElementById(`date-${key}`);
+  if (!dateEl) return;
+  fx(dateEl, { backgroundColor: ['transparent', 'rgba(88,191,169,0.28)', 'transparent'] }, { duration: 0.7, easing: 'ease-out' });
+}
+
+document.getElementById('view-docs-btn').addEventListener('click', () => {
+  document.getElementById('doc-list').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+});
+
+async function pollBulletin(month, label) {
   const result = await fetch('/api/bulletin-poll', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month })
   }).then(r => r.json());
-  document.getElementById('bulletin-heading').textContent = `Visa bulletin poll — ${month} (unattended, no upload)`;
-  const bulletinBody = document.getElementById('bulletin-body');
+
   if (result.error) {
-    bulletinBody.replaceChildren(el('div', { className: 'field-value', text: `Needs review: ${result.error}` }));
-  } else if (result.draft) {
-    const draftBody = el('div', { className: 'draft-body' });
-    draftBody.append(el('strong', { text: result.draft.subject }), document.createTextNode('\n\n' + result.draft.body));
-    bulletinBody.replaceChildren(
-      el('div', { className: 'field-value', text: `${result.case_name} — ${result.cutoff_status}` }),
-      draftBody,
-    );
-  } else {
-    bulletinBody.replaceChildren(el('div', { className: 'field-value', text: `Silent: ${result.case_name} is ${result.cutoff_status} — ${result.alert.reason}` }));
+    addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
+      { label: `Visa bulletin — ${label}`, outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
+    return;
   }
-  document.getElementById('bulletin-card').classList.remove('hidden');
+
+  const outcome = describeOutcome(result.alert.decision, !!result.draft);
+  const cutoffPlain = { current: 'is now current', not_current: 'is not yet current', retrogressed: 'moved backward' }[result.cutoff_status] || result.cutoff_status;
+  addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
+    label: `Visa bulletin — ${label}`,
+    outcome,
+    detail: `${result.case_name} ${cutoffPlain} — ${result.alert.reason}`,
+    onOpen: result.draft ? () => openDraft(result.draft, 'Recorded demo — unattended bulletin check') : null,
+  });
 }
 
 async function showGateDemo() {
   const data = await fetch('/api/gate-demo').then(r => r.json());
   const rows = document.getElementById('gate-rows');
   rows.replaceChildren(...data.results.map(r => {
+    const outcome = r.decision === 'surfaced' ? { label: 'Needs review', tone: 'review' } : { label: 'No new notification', tone: 'routine' };
     const row = el('div', { className: 'gate-row' });
-    row.append(el('span', { text: r.label }), el('span', { className: `pill ${r.decision}`, text: r.decision }));
+    row.append(el('span', { text: r.label }), el('span', { className: `gate-pill tone-${outcome.tone}`, text: outcome.label }));
     return row;
   }));
-  document.getElementById('gate-card').classList.remove('hidden');
+  document.getElementById('gate-illustration').classList.remove('hidden');
 }
+
+document.getElementById('load-btn').addEventListener('click', loadSampleCase);
+document.getElementById('gate-btn').addEventListener('click', showGateDemo);
+document.getElementById('bulletin-sep-btn').addEventListener('click', () => pollBulletin('2025-09', 'September 2025'));
+document.getElementById('bulletin-oct-btn').addEventListener('click', () => pollBulletin('2025-10', 'October 2025'));
+
+// --- Recall tab --------------------------------------------------------------
 
 async function runRecallDemo() {
   const matched = await fetch('/api/recalls/check', {
@@ -177,22 +505,80 @@ async function runRecallDemo() {
   const unmatched = await fetch('/api/recalls/check', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'unmatched' })
   }).then(r => r.json());
-  const feedLabel = matched.mode === 'live' ? 'live CPSC feed' : 'captured-real fallback (feed unavailable)';
-  document.getElementById('recall-heading').textContent = `Recall-to-remedy — ${feedLabel}`;
-  document.getElementById('recall-body').replaceChildren(
-    el('div', { className: 'field-label', text: 'Seeded receipt' }),
-    el('div', { className: 'field-value', text: `${matched.matched ? 'Matched' : 'No match'} — ${matched.message}` }),
-    el('div', { className: 'field-label', text: 'Unmatched receipt (no false ping)', style: { marginTop: '10px' } }),
-    el('div', { className: 'field-value', text: `${unmatched.matched ? 'Matched' : 'No match'} — ${unmatched.message}` }),
-  );
-  document.getElementById('recall-card').classList.remove('hidden');
+
+  const feedLabel = matched.mode === 'live' ? 'Live CPSC feed' : 'Recorded demo (feed unavailable)';
+  recallMetaLabel = `Recall demo · ${feedLabel}`;
+  updateTopMeta();
+
+  document.getElementById('recall-empty').classList.add('hidden');
+  document.getElementById('recall-loaded').classList.remove('hidden');
+
+  const matchedOutcome = matched.matched
+    ? describeOutcome(matched.alert.decision, !!matched.draft)
+    : { label: 'No new notification', tone: 'quiet', icon: 'circle-check' };
+  statusChip(document.getElementById('recall-status'), matchedOutcome);
+  document.getElementById('recall-headline').textContent = matched.matched ? 'A recall matches your receipt' : 'No recall match found';
+  document.getElementById('recall-note').textContent = matched.message;
+
+  const openBtn = document.getElementById('open-recall-draft-btn');
+  if (matched.draft) {
+    openBtn.replaceChildren(icon('mail'), document.createTextNode('Review remedy details'));
+    openBtn.style.display = '';
+    openBtn.onclick = () => openDraft(matched.draft, feedLabel);
+  } else {
+    openBtn.style.display = 'none';
+  }
+
+  const list = document.getElementById('recall-activity-list');
+  const empty = document.getElementById('recall-activity-empty');
+  addActivityRow(list, empty, {
+    label: 'Recall check — seeded receipt',
+    outcome: matchedOutcome,
+    detail: matched.message,
+    onOpen: matched.draft ? () => openDraft(matched.draft, feedLabel) : null,
+  });
+  addActivityRow(list, empty, {
+    label: 'Recall check — unmatched receipt',
+    outcome: { label: 'No new notification', tone: 'quiet', icon: 'circle-check' },
+    detail: unmatched.message,
+  });
 }
 
-document.getElementById('load-btn').addEventListener('click', loadSampleCase);
-document.getElementById('gate-btn').addEventListener('click', showGateDemo);
 document.getElementById('recall-btn').addEventListener('click', runRecallDemo);
-document.getElementById('bulletin-sep-btn').addEventListener('click', () => pollBulletin('2025-09'));
-document.getElementById('bulletin-oct-btn').addEventListener('click', () => pollBulletin('2025-10'));
+
+// --- Tabs --------------------------------------------------------------------
+
+const tabCase = document.getElementById('tab-case');
+const tabRecall = document.getElementById('tab-recall');
+const panelCase = document.getElementById('panel-case');
+const panelRecall = document.getElementById('panel-recall');
+
+function selectTab(which) {
+  const caseActive = which === 'case';
+  tabCase.classList.toggle('active', caseActive);
+  tabRecall.classList.toggle('active', !caseActive);
+  tabCase.setAttribute('aria-selected', String(caseActive));
+  tabRecall.setAttribute('aria-selected', String(!caseActive));
+  panelCase.classList.toggle('hidden', !caseActive);
+  panelRecall.classList.toggle('hidden', caseActive);
+  updateTopMeta();
+}
+tabCase.addEventListener('click', () => selectTab('case'));
+tabRecall.addEventListener('click', () => selectTab('recall'));
+
+// Lucide's <script defer> may not have finished loading yet when this
+// classic (non-deferred) script runs — nothing needs an icon before a user
+// interacts, but render once more once every deferred script has settled.
+renderIcons();
+document.addEventListener('DOMContentLoaded', renderIcons);
+</script>
+
+<script type="module">
+// Optional enhancement only — see fx()/icon()'s fallbacks above. If this
+// import is slow or the CDN is unreachable, the page stays fully usable
+// with instant state changes instead of animated ones.
+import { animate } from "https://cdn.jsdelivr.net/npm/motion@13.2.0/+esm";
+window.__motionAnimate = animate;
 </script>
 </body>
 </html>

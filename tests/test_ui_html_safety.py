@@ -2,32 +2,30 @@ import re
 from pathlib import Path
 
 _UI_SOURCE = (Path(__file__).parent.parent / "ui" / "index.html").read_text()
-_SCRIPT = _UI_SOURCE.split("<script>", 1)[1].split("</script>", 1)[0]
+# Matches every inline <script>...</script> block regardless of attributes
+# (e.g. type="module", needed for ESM imports) — a <script src="..."> tag
+# for an external library has no inline body and won't match here, since
+# F5's concern is our own authored code, not a third-party library's.
+_INLINE_SCRIPTS = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", _UI_SOURCE, re.DOTALL)
+_ALL_INLINE_JS = "\n".join(_INLINE_SCRIPTS)
+# Strip comments before scanning so documentation that merely *mentions*
+# innerHTML (explaining why the code avoids it) doesn't trip the check below.
+_CODE_ONLY = re.sub(r"//.*?$|/\*.*?\*/", "", _ALL_INLINE_JS, flags=re.MULTILINE | re.DOTALL)
 
 
-def test_innerhtml_assignments_never_interpolate_dynamic_content():
+def test_no_innerhtml_usage_in_inline_scripts():
     """API/model text (draft body, evidence, gate reasons, recall messages)
     must never be inserted via innerHTML — a returned string containing
-    markup would be parsed and executed by the browser (F5). Dynamic values
-    belong in textContent/text nodes; innerHTML may only hold static markup.
+    markup would be parsed and executed by the browser (F5). This app's own
+    script never needs innerHTML at all: dynamic content always goes through
+    textContent/text nodes (see the `el()` helper), so the safest guarantee
+    is that innerHTML never appears in our inline script's actual code.
     """
-    template_literal_assignments = re.findall(r"\.innerHTML\s*=\s*`(.*?)`", _SCRIPT, re.DOTALL)
-    for literal in template_literal_assignments:
-        assert "${" not in literal, f"innerHTML assignment interpolates a value: {literal!r}"
+    assert ".innerHTML" not in _CODE_ONLY, "inline script uses innerHTML — dynamic content must use textContent instead"
 
 
-def test_html_like_draft_text_renders_literally_not_as_markup():
-    """Simulate what the browser's DOM would do with a draft body containing
-    HTML-like text, using Node's DOM-less string-building absence as a proxy:
-    assert the script sets textContent (never innerHTML) wherever draft
-    subject/body, evidence, or message fields are rendered.
-    """
-    for dynamic_field in ("result.draft.body", "result.draft.subject", "result.alert.reason",
-                           "matched.message", "unmatched.message"):
-        assert dynamic_field in _SCRIPT, f"expected {dynamic_field} to still be rendered somewhere"
-    # None of those fields' rendering lines may go through innerHTML.
-    for line in _SCRIPT.splitlines():
-        if "innerHTML" in line:
-            for dynamic_field in ("result.draft.body", "result.draft.subject", "result.alert.reason",
-                                   "matched.message", "unmatched.message", "fields[key]", "fields.evidence"):
-                assert dynamic_field not in line, f"{dynamic_field} is rendered via innerHTML: {line.strip()}"
+def test_dynamic_content_rendering_uses_textcontent():
+    """Smoke check that dynamic rendering logic actually exists (guards
+    against this file accidentally losing all its rendering code while
+    trivially satisfying the innerHTML-free check above)."""
+    assert _ALL_INLINE_JS.count("textContent") >= 5
