@@ -1,0 +1,24 @@
+{
+  "dos_bulletin": {
+    "chart_type": "dates_for_filing",
+    "month": "2025-10",
+    "cutoffs": { "EB2-India": "2013-12-01" },
+    "source_provenance": {
+      "url": "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/2026/visa-bulletin-for-october-2025.html",
+      "note": "The primary travel.state.gov page returned HTTP 403 to automated fetching in this session; the EB2-India Dates for Filing value below is corroborated by independent legal-industry coverage of the same October 2025 bulletin (see verification_sources). Replace with a direct capture of the primary page if/when it becomes fetchable. October 2025 is the first bulletin of FY2026 — USCIS switched the designated chart from Final Action Dates (September) to Dates for Filing (October) for employment-based categories, which is why this month's chart_type differs from 2025-09.json's.",
+      "verification_sources": [
+        "https://www.bal.com/immigration-news/united-states-october-2025-visa-bulletin-dates-for-filing-chart-shows-advancement-across-eb-1-eb-2-and-eb-3-categories/",
+        "https://www.fragomen.com/insights/united-states-october-2025-visa-bulletin-update-uscis-to-honor-dates-for-filing-for-employment-based-categories.html"
+      ],
+      "verified_on": "2026-09-10"
+    }
+  },
+  "uscis_chart_selection": {
+    "month": "2025-10",
+    "designated_chart_type": "dates_for_filing",
+    "source_provenance": {
+      "url": "https://www.uscis.gov/green-card/green-card-processes-and-procedures/visa-availability-priority-dates/when-to-file-your-adjustment-of-status-application-for-family-sponsored-or-employment-based-117",
+      "verified_on": "2026-09-10"
+    }
+  }
+}

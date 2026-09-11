@@ -1,0 +1,24 @@
+{
+  "note": "Canned Bedrock Converse response text (see agent/llm/document_client.py::RecordedResponseClient) for offline/demo use when no live AWS credentials are configured. Keyed by specimen document name; each value is exactly the JSON text extract_fields() expects to parse out of response['output']['message']['content'][0]['text']. Not a source of truth independent of live extraction — see tests/test_live_extraction.py for the live check against the same specimen images.",
+  "i94": {
+    "admit_until": {
+      "value": "2026-11-03",
+      "evidence": "Admit Until Date: 11/03/2026",
+      "status": "extracted"
+    }
+  },
+  "i797": {
+    "i797_valid_until": {
+      "value": "2026-12-28",
+      "evidence": "Valid To: 12/28/2026",
+      "status": "extracted"
+    }
+  },
+  "passport": {
+    "passport_expiry": {
+      "value": "2026-11-03",
+      "evidence": "Date of Expiration: 03 NOV 2026",
+      "status": "extracted"
+    }
+  }
+}

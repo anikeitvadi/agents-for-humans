@@ -1,0 +1,39 @@
+[project]
+name = "immigration-status-guardian"
+version = "0.1.0"
+description = "One engine that reads the government so you don't have to — immigration document-date discrepancy guardian, built on the Strands Agents SDK."
+requires-python = ">=3.11"
+dependencies = [
+    "strands-agents",
+    "strands-agents-tools",
+    "boto3",
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pillow",  # fixtures/sample_case/generate_specimens.py only; not imported by agent/ at runtime
+]
+deploy = [
+    "bedrock-agentcore",
+    "aws-opentelemetry-distro>=0.10.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "live: requires real AWS Bedrock credentials/model access; excluded from the default run",
+]
+addopts = "-m 'not live'"
