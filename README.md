@@ -28,7 +28,8 @@ agent/
             otherwise replays a recorded response; the same validation runs
             either way), draft.py (attorney message — a fixed, always-present
             safety-boundary core; a Strands Agent may only add a personalized
-            intro around it, never edit it)
+            intro around it, never edit it), guardian.py (the conversational
+            agent: a Strands Agent whose only tools are the engine's checks)
   packs/
     immigration/  rules.py (I-94/I-797 date-gap check; bulletin-cutoff check
                   requiring the USCIS-designated chart), pipeline.py (sample
@@ -43,11 +44,13 @@ fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
                         chart designation, one seeded case (see its README)
 fixtures/recalls/       one seeded receipt + a captured real CPSC recall
 deploy/   agentcore_entrypoint.py — AgentCore Runtime entrypoint (deployed)
-tests/    113 offline tests (rules, extraction, decision gate, bulletin poll,
-          recall pipeline, replay-safe dedup, Runtime entrypoint) + 4 opt-in live
+tests/    123 offline tests (rules, extraction, decision gate, bulletin poll,
+          recall pipeline, guardian agent, Runtime entrypoint) + 4 opt-in live
 ```
 
 **The rules engine is deterministic Python, not an LLM judgment call.** The model is only ever called for two things: extracting fields from a document, and writing the plain-English wrapper around a rules-engine result it cannot alter. See `docs/architecture-spec.md` §4.2 for why this boundary is enforced in code rather than in a prompt.
+
+**The guardian agent** (`agent/llm/guardian.py`) is the conversational front door, in the UI ("Ask the guardian"), at `POST /api/ask`, and as the `{"prompt": ...}` payload on the AgentCore Runtime. It is a Strands Agent with four tools, each a thin wrapper over a pack function bound to the same ledger the UI uses: `check_document_dates`, `run_sample_case_check`, `check_visa_bulletin`, `check_recall`. Its system prompt forbids computing dates or stating status itself; it can only call a tool and report the result, and every answer lists the tools it called. A fresh agent runs per question, so requests are stateless. Tests drive the real Strands tool loop with a scripted model (`tests/scripted_model.py`), so none of this depends on Bedrock being reachable.
 
 **The decision gate** (`agent/engine/decision_gate.py`) is why the agent stays quiet: an event only surfaces if it's material, actionable, has an open window, and hasn't already been surfaced for the same event. Everything else updates the ledger silently.
 
@@ -59,6 +62,7 @@ All four run from the demo controls in the UI, on a clean `data/demo.db`:
 2. **Show decision gate.** The same engine on three events: one surfaces, two stay silent, each with its reason.
 3. **Poll bulletin, September then October 2025.** Simulates the unattended monthly check. September: the priority date is not current, silent. October: USCIS switches to the Dates for Filing chart, the date is current, one ping with a draft.
 4. **Run recall check.** The seeded receipt against the live CPSC feed, or the captured recall if offline. One ping: refund or voucher.
+5. **Ask the guardian.** Type a question or pick a suggestion. The agent calls one of its four tools and reports the result, with the tool names shown under the answer. Needs Bedrock model access; without it the box explains why.
 
 ## Known scope limits (by design, for this deadline)
 
@@ -75,7 +79,7 @@ The same pipeline runs on Amazon Bedrock AgentCore Runtime through `deploy/agent
 arn:aws:bedrock-agentcore:us-east-1:654654285440:runtime/immigration_status_guardian-SCAdbeBj6Z
 ```
 
-Payloads: `{}` runs the sample case with recorded extraction, `{"extraction": "live"}` runs live Bedrock extraction, `{"fields": {...}}` skips extraction and runs the rule on the given dates. Verified in the cloud: the first invoke surfaces the 55-day gap with an attorney draft, the second is silent and returns the same draft.
+Payloads: `{"prompt": "Do my documents disagree?"}` asks the guardian agent (it picks and runs a tool, then answers); `{}` runs the sample case with recorded extraction; `{"extraction": "live"}` runs live Bedrock extraction; `{"fields": {...}}` skips extraction and runs the rule on the given dates. Verified in the cloud: the first invoke surfaces the 55-day gap with an attorney draft, the second is silent and returns the same draft.
 
 To deploy your own copy:
 
@@ -101,7 +105,7 @@ Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS crede
 ```bash
 python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                             # 113 offline tests, no AWS credentials required
+pytest                             # 123 offline tests, no AWS credentials required
 pytest -m live                     # 4 live tests: need Bedrock access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```

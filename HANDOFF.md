@@ -1,4 +1,14 @@
-# Handoff (updated 2026-09-11 midday)
+# Handoff (updated 2026-09-11 PM)
+
+**Session 2026-09-11 PM (Claude): the guardian agent.** Bedrock still blocked (AWS support diagnosed a failed card authorization, not verification; case opened; Ani updating payment method). While waiting, closed the biggest judging gap ("Strands Agents usage quality"): `agent/llm/guardian.py` is a real Strands Agent with four `@tool`s wrapping the engine's checks on the same store/clients the UI uses (`check_document_dates`, `run_sample_case_check`, `check_visa_bulletin`, `check_recall`); system prompt forbids computing dates or stating status; a fresh Agent per question (stateless); tool calls are read back from `agent.messages` and returned with every answer; any model failure is returned as `error`, never raised. Surfaces: UI "Ask the guardian" box with four suggestion chips (Case review tab, above demo controls; textContent only, html-safety test still passes), `POST /api/ask` (`{"question": ...}` → `available/answer/tools_called/tools/error`; `available:false` with the tool list when no model), and the Runtime entrypoint `{"prompt": ...}` path (so the toolkit's suggested `agentcore invoke '{"prompt": "Hello"}'` now hits a real agent). Tests: `tests/scripted_model.py` is a Strands `Model` double that plays a script of tool-use/text turns, so the real Strands tool registration + loop runs offline; `tests/test_guardian.py` (6), `tests/test_ask_endpoint.py` (3), entrypoint prompt test (1). Suite: **123 passed** offline. Smoke: `/api/ask` on this machine (creds present, Bedrock blocked) returns HTTP 200 with the Error 002 text in `error`, UI shows it in the answer box. Headless-Chrome screenshot of the new section looked right. `PRIOR_CAPTURED_MONTH` moved into `bulletin.py` (app.py + entrypoint import it). **Runtime not yet redeployed with the prompt path: Ani runs `AGENTCORE_SUPPRESS_RECOMMENDATION=1 .venv/bin/agentcore deploy`, then `agentcore invoke '{"prompt": "Do my documents disagree? I-94 2026-11-03, I-797 2026-12-28"}'` once Bedrock works.**
+
+**Next steps, in order (as of 2026-09-11 PM):**
+1. Bedrock: fix the card authorization (Billing → Payment methods), wait for the support case; then submit the Anthropic use-case form (Bedrock → Model access). Verify with `pytest -m live` and `/api/ask`.
+2. Redeploy the Runtime (prompt path) and invoke with a prompt; record the answer in the README.
+3. Flip the repo public; confirm MIT in About.
+4. Devpost text description + builder.aws post (Claude can draft), video script; ownership split with partner.
+5. Optional live demo link (host the FastAPI UI) only if 1–4 are done by Saturday.
+
 
 **Session 2026-09-11 midday (Claude, on Ani's machine):** AWS credentials configured locally (IAM user `hackathon`, AdministratorAccess, account 654654285440, us-east-1). **Bedrock is blocked account-wide:** every model in every region returns `ValidationException: Error 002: Access to Bedrock models is not allowed for this account`; not an org/SCP issue (account is not in an organization); the Anthropic use-case form is also unfilled. Community reports say this is a new-account verification hold cleared only by an AWS Support case (Account & billing, free tier is fine). Until it clears: extraction runs `recorded`, drafts use the deterministic core (Strands Agent call fails and falls back), `pytest -m live` fails with Error 002 (3 of 4; the CPSC one passes). Nothing in the demo is broken by this; it just isn't "live".
 
@@ -8,7 +18,7 @@ Code changes this session: `deploy/agentcore_entrypoint.py` rewritten (wires the
 
 Configured with the (deprecated but working) Python starter toolkit `bedrock-agentcore-starter-toolkit 0.3.12`, `.bedrock_agentcore.yaml` (gitignored) with `source_path` set to the repo root so `agent/` and `fixtures/` ship; module resolves to `deploy.agentcore_entrypoint:app`; direct_code_deploy, memory disabled, OTEL on, execution role + S3 auto-create. Deployed, see above. AWS now recommends the Node CLI `npm install -g @aws/agentcore`; the Python toolkit still deploys.
 
-**Next steps, in order (as of 2026-09-11 midday):**
+**Next steps as of 2026-09-11 midday (superseded by the PM list above):**
 1. **Open the AWS Support case for Bedrock Error 002** (console: Support Center → Create case → Account and billing → "Bedrock access blocked, Error 002, new account"). Both builders' accounts if the partner's is also new.
 2. ~~Run `agentcore deploy`~~ done; ARN recorded above and in the README.
 3. **Flip the repo public**, confirm MIT shows in About.

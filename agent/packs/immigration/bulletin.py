@@ -35,6 +35,13 @@ class SeededCase:
     chargeability: str
 
 
+# The immediately preceding captured month, keyed by month. Lets a poll skip
+# a same-chart-type retrogression comparison correctly (see
+# fixtures/bulletins/README.md) without calendar arithmetic over a fixture
+# set that does not cover every month.
+PRIOR_CAPTURED_MONTH: dict[str, str] = {"2025-10": "2025-09"}
+
+
 def load_seeded_case(bulletins_dir: Path = BULLETINS_DIR) -> SeededCase:
     data = json.loads((bulletins_dir / "seeded_case.json").read_text())
     return SeededCase(

@@ -10,13 +10,15 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from strands.models import Model
 
 from agent.config import BEDROCK_MODEL_ID
 from agent.engine.decision_gate import GateInputs, evaluate_gate
 from agent.engine.store import Store
 from agent.llm.document_client import build_extraction_client
 from agent.llm.draft import build_bedrock_agent
-from agent.packs.immigration.bulletin import load_seeded_case, run_bulletin_poll
+from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names
+from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll
 from agent.packs.immigration.pipeline import extract_sample_case_fields, run_sample_case
 from agent.packs.recalls.feed import get_recall_item
 from agent.packs.recalls.pipeline import run_recall_check
@@ -37,14 +39,19 @@ class BulletinPollRequest(BaseModel):
     month: str  # "2025-09" or "2025-10" — which captured bulletin month to simulate polling
 
 
-# The immediately preceding captured month, keyed by month — lets the poll
-# skip a same-chart-type retrogression comparison correctly (see
-# fixtures/bulletins/README.md) without guessing at calendar arithmetic
-# over a fixture set that may not cover every month.
-_PRIOR_BULLETIN_MONTH = {"2025-10": "2025-09"}
+class AskRequest(BaseModel):
+    question: str  # free text for the guardian agent (agent/llm/guardian.py)
 
 
-def create_app(db_path: str = "data/demo.db", attempt_live_recall_feed: bool = False) -> FastAPI:
+_PRIOR_BULLETIN_MONTH = PRIOR_CAPTURED_MONTH
+
+
+def create_app(
+    db_path: str = "data/demo.db",
+    attempt_live_recall_feed: bool = False,
+    guardian_model: Model | None = None,
+    auto_guardian_model: bool = True,
+) -> FastAPI:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     store = Store(db_path)
     # None when no AWS credentials are configured (e.g. this sandbox) — the
@@ -62,6 +69,23 @@ def create_app(db_path: str = "data/demo.db", attempt_live_recall_feed: bool = F
     # fetched-or-fallback recall is resolved once at startup, not per
     # request, and its mode is surfaced in every response (C4).
     recall_item, recall_mode = get_recall_item(attempt_live=attempt_live_recall_feed)
+    # The conversational front door: a Strands Agent whose only tools are
+    # the engine's checks, bound to this app's store and clients. Tests
+    # inject a scripted model; the real app uses Bedrock when credentials
+    # exist and otherwise reports the agent as unavailable.
+    guardian_tools = build_guardian_tools(
+        store,
+        extraction_client=extraction_client,
+        extraction_mode=extraction_mode,
+        model_id=BEDROCK_MODEL_ID,
+        recall_item=recall_item,
+        recall_mode=recall_mode,
+        receipts_loader=_load_receipts,
+        prior_bulletin_months=_PRIOR_BULLETIN_MONTH,
+        draft_agent=bedrock_agent,
+    )
+    if guardian_model is None and auto_guardian_model:
+        guardian_model = build_guardian_model(BEDROCK_MODEL_ID)
     app = FastAPI(title="Immigration Status Guardian — demo backend")
 
     @app.get("/api/sample-case")
@@ -151,6 +175,28 @@ def create_app(db_path: str = "data/demo.db", attempt_live_recall_feed: bool = F
             "demo_scope": result.match.demo_scope,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason},
             "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+        }
+
+    @app.post("/api/ask")
+    def ask(req: AskRequest):
+        """One question, one fresh Strands agent run; the answer can only
+        come from tool results (see agent/llm/guardian.py)."""
+        names = tool_names(guardian_tools)
+        if guardian_model is None:
+            return {
+                "available": False,
+                "answer": None,
+                "tools_called": [],
+                "tools": names,
+                "error": "The guardian agent needs a Bedrock model: configure AWS credentials with model access.",
+            }
+        result = ask_guardian(guardian_model, guardian_tools, req.question)
+        return {
+            "available": True,
+            "answer": result.answer,
+            "tools_called": result.tools_called,
+            "tools": names,
+            "error": result.error,
         }
 
     ui_dir = REPO_ROOT / "ui"

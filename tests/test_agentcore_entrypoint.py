@@ -16,6 +16,7 @@ def _load(monkeypatch, tmp_path):
     monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(tmp_path / "no-credentials"))
     monkeypatch.setenv("AWS_CONFIG_FILE", str(tmp_path / "no-config"))
     monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
+    monkeypatch.setenv("GUARDIAN_LIVE_RECALL", "0")
     module = importlib.import_module("deploy.agentcore_entrypoint")
     return importlib.reload(module)
 
@@ -53,3 +54,14 @@ def test_fields_payload_skips_extraction(monkeypatch, tmp_path):
 def test_none_payload_is_treated_as_empty(monkeypatch, tmp_path):
     entrypoint = _load(monkeypatch, tmp_path)
     assert entrypoint.invoke(None)["path"] == "sample_case"
+
+
+def test_prompt_payload_reports_missing_model_offline(monkeypatch, tmp_path):
+    entrypoint = _load(monkeypatch, tmp_path)
+
+    out = entrypoint.invoke({"prompt": "Do my documents disagree?"})
+
+    assert out["path"] == "agent"
+    assert out["answer"] is None
+    assert out["tools"] == ["check_document_dates", "run_sample_case_check", "check_visa_bulletin", "check_recall"]
+    assert "model" in out["error"]
