@@ -1,4 +1,15 @@
-# Handoff (updated 2026-09-10 PM)
+# Handoff (updated 2026-09-11 AM)
+
+**Session 2026-09-11 AM (Claude, on Ani's machine):** pulled merged `main` (PR #1), created `.venv` locally (uv, Python 3.13), `pytest -q` → 109 passed, 4 deselected. Ran the real app (`uvicorn agent.app:app`) and hit every endpoint on a clean `data/demo.db`: sample case surfaces with draft, repeat is silent with the same draft; bulletin Sep silent / Oct surfaced with draft; recall `mode: live` against CPSC, surfaced then silent on repeat, unmatched receipt silent. Partner (DarshanHari19) has **accepted** the collaborator invite (write). Repo is still **private**. No AWS CLI, credentials, or `agentcore` CLI on this machine. Changes this session: README reconciled with the real code (module map, demo flows, scope limits, setup; stale `fields.json` and "50 tests" removed) and `docs/architecture.svg` added (built vs. production path), embedded in the README.
+
+**Next steps, in order (as of 2026-09-11 AM):**
+1. **AWS credits: claim by TODAY Fri Sep 11, 12pm PT, per person** (rule in `docs/brief.md`). Both builders.
+2. **Flip the repo public** and confirm "MIT License" shows in the GitHub About section. Required for submission; everything in the repo is already clean for it.
+3. **Decide ownership split and repo name** (placeholder "Clockwork" vs. current "Immigration Status Guardian"). Blocks splitting the remaining work.
+4. **AgentCore Runtime deploy attempt** (Day-3, time-boxed): needs AWS credentials + `bedrock-agentcore` on a machine; `deploy/agentcore_entrypoint.py` is unverified. Also run `pytest -m live` once credentials exist (live Bedrock extraction + CPSC).
+5. **Manual phone/browser click-through** of the UI by a human: `uvicorn agent.app:app --reload` then http://127.0.0.1:8000/ (wipe `data/demo.db` first).
+6. **Record the 5-minute video** (problem / who / why; use `docs/architecture.svg` for the spine) and write the three builder.aws posts.
+
 
 **UI redesign done (2026-09-10)** — full rewrite of `ui/index.html` per a detailed design brief (decision-first hierarchy, two-tab layout, translated internal-state language, refined dark palette, Motion + Lucide for three deliberate animation moments). Highlights:
 - **Hierarchy flip:** the document-date comparison (headline, side-by-side dates, connector showing the day gap, "Review attorney draft" CTA) is now the first thing shown, above all parsing/process detail. Demo-trigger buttons moved into a collapsible `<details class="demo-controls">`, de-emphasized as what they are — a way to simulate uploads/scheduled checks without a live upload.
@@ -12,15 +23,7 @@
 - Verified: `.venv/bin/python -m pytest -q` → 109 passed (unaffected, UI-only change). Browser-verified via live click-throughs and direct DOM dispatch (this environment's tab intermittently isn't OS-foreground, which silently drops real automated clicks without erroring — confirmed harmless to the app itself by cross-checking with direct `dispatchEvent`/function calls): sample case load + repeat (draft retention), side panel open/close, document-highlight, tab switching + per-tab header label, gate illustration, both bulletin polls accumulating into one activity feed, recall demo with live CPSC data. Mobile layout verified via DOM source order + CSSOM media-query inspection rather than a true narrow-viewport screenshot (the resize tool didn't produce a real viewport-width change in this environment).
 - Not yet done: no user has looked at this on a real phone; the "205 days"-style technical detail text under each activity row is still fairly raw (shows the internal `reason` string, e.g. `failed: materiality, actionability, window`) — acceptable per the brief ("keep technical explanations in an expandable details area") but could be translated further in a future pass.
 
-**Next steps, in order (as of 2026-09-10 PM):**
-1. **PR #1 review/merge** — `implementation/day2-bug-fixes` → `main`, open at https://github.com/anikeitvadi/agents-for-humans/pull/1, mergeable, contains F1–F5 + C1–C4, 109 tests passing, all five demo flows browser-verified. Someone (Ani or partner) should read and merge it.
-2. **Flip the repo public + confirm the MIT LICENSE** shows in the GitHub "About" section — required before submission; repo was still private as of the last check.
-3. **Partner (DarshanHari19) collaborator invite** — sent 2026-09-09, acceptance still unconfirmed; needed before real two-person work (ownership split, video) can start.
-4. **Resolve the "who owns what" and repo-rename decisions** — still open, waiting on the humans (see "Decisions waiting on the humans" below); blocks splitting remaining work.
-5. **Export the architecture diagram as an image** for the README/video per submission requirements.
-6. **Reconcile README prose end-to-end** against current real behavior (it doesn't reference stale fixtures, but hasn't been read fully against the finished C1–C4 implementation).
-7. **Attempt AgentCore Runtime deploy** (Day-3 item) — needs real AWS/AgentCore CLI access not available in this sandbox; verify imports, data-directory init, payload contract, model wiring per the implementation-handoff's finish checklist.
-8. **Record the 5-minute demo video** (problem / who / why) and write the three required builder.aws posts — last, once the above is settled.
+**Next steps as of 2026-09-10 PM (superseded by the 2026-09-11 list above):** PR #1 merged 2026-09-11; partner invite accepted; README reconciled and diagram exported 2026-09-11. Still open: flip public, ownership/rename, AgentCore deploy, video + posts.
 
 **Browser verification done (2026-09-10), all five demo controls, on a clean `data/demo.db`:**
 - Load sample case (twice): correct dates/evidence, 55-day gap flagged, draft renders as plain text (confirms the F5 HTML-injection fix holds visually, not just in the regression test); second click correctly shows "no new ping" while still displaying the same saved draft (C2 confirmed live).
@@ -81,7 +84,7 @@
 
 **Prior handoff note (2026-09-10 AM), superseded by the above:** Read [the implementation summary and repair handoff](docs/implementation-handoff-2026-09-10.md) before continuing the build. It contains the reviewed baseline, confirmed bugs, missing demo paths, acceptance criteria, and a prompt for the next Claude Code session. Older entries below include superseded scope/completion claims.
 
-**Repo:** https://github.com/anikeitvadi/agents-for-humans (private for now; must be flipped to public with an MIT LICENSE file before submission). Partner (DarshanHari19) invited as collaborator with write access on 2026-09-09; pending their acceptance.
+**Repo:** https://github.com/anikeitvadi/agents-for-humans (private for now; must be flipped to public with an MIT LICENSE file before submission). Partner (DarshanHari19) accepted the collaborator invite (write access) by 2026-09-11.
 
 **State:** idea chosen (2026-09-09): immigration status guardian, Everyday track. Two builders (Ani + partner). The ranked board is `docs/draft-board.html`; the idea trail is `docs/ideas-discussed.md`; the brief and rules are `docs/brief.md`; raw research is `research/`; architecture is `docs/architecture-spec.md`.
 
@@ -95,7 +98,7 @@
 
 **Decisions waiting on the humans:** who owns what (backend/agents vs. feeds/UI vs. video — spec proposes Person A = engine/AgentCore, Person B = domain packs/dashboard/demo); repo name/rename from placeholder "Clockwork"; whether to add the moneylines decision engine (calibration loop) as a component (leaning no — out of scope for this build).
 
-**Hard dates:** credits by Thu Sep 11 12pm PT (per person). Submit by Mon Sep 14 noon (closes 5pm PT). Ani is unavailable Thu Sep 10 around 2:00pm CT: nothing is scheduled against Wed night or Thu early afternoon.
+**Hard dates:** credits by Fri Sep 11 12pm PT (per person). Submit by Mon Sep 14 noon (closes 5pm PT). Ani is unavailable Thu Sep 10 around 2:00pm CT: nothing is scheduled against Wed night or Thu early afternoon.
 
 **Timeline once chosen:** Wed: scope, repo skeleton, seed data, diagram. Thu after 2:30: agents + tools. Fri/Sat: integrations + the demo moment end to end. Sun: AgentCore deploy, live link, README, three builder.aws posts. Mon AM: video, submit.
 

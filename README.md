@@ -14,49 +14,72 @@ H-1B holders and their attorneys, and international students/workers generally, 
 
 ## How it works
 
+![Architecture: what is built and what is the production path](docs/architecture.svg)
+
 One deterministic engine, two domain packs:
 
 ```
 agent/
   engine/   schema.py, store.py (SQLite), decision_gate.py, engine.py — the
             deterministic control flow. No LLM in this path.
-  llm/      extract.py (Bedrock document extraction, with per-field evidence
-            and explicit missing/ambiguous handling), draft.py (attorney
-            message — a fixed, always-present safety-boundary core; the LLM
-            may only add a personalized intro around it, never edit it)
+  llm/      extract.py (Bedrock Converse document extraction, with per-field
+            evidence and explicit missing/ambiguous handling),
+            document_client.py (live Bedrock when AWS credentials exist,
+            otherwise replays a recorded response; the same validation runs
+            either way), draft.py (attorney message — a fixed, always-present
+            safety-boundary core; a Strands Agent may only add a personalized
+            intro around it, never edit it)
   packs/
     immigration/  rules.py (I-94/I-797 date-gap check; bulletin-cutoff check
-                  requiring the USCIS-designated chart), pipeline.py
-    recalls/      rules.py (exact manufacturer+product match, demo-scope)
+                  requiring the USCIS-designated chart), pipeline.py (sample
+                  case end to end), bulletin.py (unattended monthly poll)
+    recalls/      rules.py (exact manufacturer+product match, demo-scope),
+                  feed.py (live CPSC API, captured fallback), pipeline.py
   app.py    FastAPI backend serving the API + the static UI
-ui/index.html   static demo UI (load sample case / decision gate / recall demo)
-fixtures/sample_case/   synthetic documents (invented data, real specimen format)
-tests/    50 tests covering rules, extraction, the decision gate, and
-          replay-safe deduplication
+ui/index.html   static demo UI: "Case review" and "Recall demo" tabs, plus
+                demo controls that simulate an upload or a scheduled poll
+fixtures/sample_case/   three synthetic specimen images + a recorded extraction
+fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
+                        chart designation, one seeded case (see its README)
+fixtures/recalls/       one seeded receipt + a captured real CPSC recall
+deploy/   agentcore_entrypoint.py — AgentCore Runtime wrapper, not yet verified
+tests/    109 offline tests (rules, extraction, decision gate, bulletin poll,
+          recall pipeline, replay-safe dedup) + 4 opt-in live tests
 ```
 
 **The rules engine is deterministic Python, not an LLM judgment call.** The model is only ever called for two things: extracting fields from a document, and writing the plain-English wrapper around a rules-engine result it cannot alter. See `docs/architecture-spec.md` §4.2 for why this boundary is enforced in code rather than in a prompt.
 
 **The decision gate** (`agent/engine/decision_gate.py`) is why the agent stays quiet: an event only surfaces if it's material, actionable, has an open window, and hasn't already been surfaced for the same event. Everything else updates the ledger silently.
 
+## Demo flows
+
+All four run from the demo controls in the UI, on a clean `data/demo.db`:
+
+1. **Load sample case.** Three specimen images go through extraction, then the I-94/I-797 date-gap rule. The 55-day gap surfaces once, with an attorney draft. Loading it again is silent and returns the same draft.
+2. **Show decision gate.** The same engine on three events: one surfaces, two stay silent, each with its reason.
+3. **Poll bulletin, September then October 2025.** Simulates the unattended monthly check. September: the priority date is not current, silent. October: USCIS switches to the Dates for Filing chart, the date is current, one ping with a draft.
+4. **Run recall check.** The seeded receipt against the live CPSC feed, or the captured recall if offline. One ping: refund or voucher.
+
 ## Known scope limits (by design, for this deadline)
 
 - **No lawful-status, F-1/OPT, or unlawful-presence computation.** That domain logic (INA §212(a)(9)(B) bars, status-length math) is deferred to a later iteration — see `HANDOFF.md`. This build only compares two document dates arithmetically.
 - **Recall matching is demo-scope**: exact manufacturer+product match against one seeded receipt, not a general fuzzy matcher. Labeled as such in the UI and here so a judge testing their own receipt doesn't mistake it for general-purpose.
-- **Sample case only, no real document uploads** in the live demo — `fixtures/sample_case/fields.json` is a synthetic fixture (invented data in the real I-94/I-797/passport specimen format), so nobody uploads real immigration documents to a hackathon URL.
+- **Sample case only, no real document uploads** in the live demo — `fixtures/sample_case/specimens/` holds three synthetic images (invented identity and dates in the real I-94/I-797/passport format) and `recorded_extraction_response.json` is what Bedrock returned for them, so nobody uploads real immigration documents to a hackathon URL. With AWS credentials the same specimens go through live Bedrock extraction.
+- **The bulletin beat is a historical replay, not a live fetch.** travel.state.gov blocks automated fetching, so the September and October 2025 bulletins are captured fixtures; their provenance and corroborating sources are in `fixtures/bulletins/README.md`.
 
 ## Production path (not built for this deadline)
 
-AgentCore Memory, Identity (Cognito), Policy (Cedar), Observability (OTEL), and Gateway-brokered auth for the external feeds are real requirements for shipping this beyond a demo — see `docs/architecture-spec.md` §4.6 for the design. AgentCore Runtime deployment itself was a time-boxed Day-3 attempt; see `deploy/` and the architecture diagram for what that adds without changing any of the logic above.
+AgentCore Memory, Identity (Cognito), Policy (Cedar), Observability (OTEL), and Gateway-brokered auth for the external feeds are real requirements for shipping this beyond a demo — see `docs/architecture-spec.md` §4.6 for the design. AgentCore Runtime deployment is a time-boxed Day-3 item: `deploy/agentcore_entrypoint.py` wraps the same pipeline without changing any of the logic above, but has not yet been verified against a live Runtime.
 
 ## Setup
 
 Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS credentials with Bedrock model access (used for document extraction and draft personalization even when running locally — this is not an AgentCore-only dependency).
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest tests/                      # 50 tests, no AWS credentials required
+pytest                             # 109 offline tests, no AWS credentials required
+pytest -m live                     # 4 live tests: need Bedrock access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```
 
