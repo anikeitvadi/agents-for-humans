@@ -10,3 +10,4 @@ data/
 .pytest_cache/
 .serena/
 .bedrock_agentcore.yaml
+.bedrock_agentcore/

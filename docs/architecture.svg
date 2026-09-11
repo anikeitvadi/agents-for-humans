@@ -32,7 +32,7 @@
   <!-- BUILT BAND -->
   <rect x="60" y="236" width="1080" height="440" rx="12" fill="none" stroke="#2E8C77" stroke-width="2"/>
   <rect x="76" y="226" width="318" height="20" fill="#F7F8F6"/>
-  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 109 tests pass with no AWS credentials</text>
+  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 113 tests pass with no AWS credentials</text>
 
   <!-- INPUTS -->
   <rect x="80" y="262" width="300" height="160" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
@@ -116,13 +116,14 @@
 
   <!-- PRODUCTION PATH BAND -->
   <rect x="60" y="704" width="1080" height="170" rx="12" fill="none" stroke="#8A97A3" stroke-width="1.5" stroke-dasharray="7 5"/>
-  <rect x="76" y="694" width="372" height="20" fill="#F7F8F6"/>
-  <text x="84" y="709" font-size="12" font-weight="700" fill="#5B6773" letter-spacing="0.6">PRODUCTION PATH · designed, not built for this deadline</text>
-  <rect x="80" y="728" width="245" height="128" rx="8" fill="#FFFFFF" stroke="#C7D0D8" stroke-dasharray="4 3"/>
-  <text x="94" y="749" font-size="12" font-weight="700" fill="#3A4652">AgentCore Runtime</text>
-  <text x="94" y="769" font-size="11" fill="#3A4652">deploy/agentcore_entrypoint.py wraps</text>
-  <text x="94" y="784" font-size="11" fill="#3A4652">the same pipeline with no logic change.</text>
-  <text x="94" y="804" font-size="11" fill="#8A6414">Not yet verified against a live Runtime.</text>
+  <rect x="76" y="694" width="400" height="20" fill="#F7F8F6"/>
+  <text x="84" y="709" font-size="12" font-weight="700" fill="#5B6773" letter-spacing="0.6">PRODUCTION PATH · Runtime is built; the rest is design only</text>
+  <rect x="80" y="728" width="245" height="128" rx="8" fill="#E6F4F0" stroke="#2E8C77" stroke-width="1.5"/>
+  <text x="94" y="749" font-size="12" font-weight="700" fill="#2E8C77">AgentCore Runtime · DEPLOYED</text>
+  <text x="94" y="769" font-size="11" fill="#3A4652">deploy/agentcore_entrypoint.py runs the</text>
+  <text x="94" y="784" font-size="11" fill="#3A4652">same pipeline. Direct code deploy, logs</text>
+  <text x="94" y="799" font-size="11" fill="#3A4652">and traces on. Invoked in the cloud:</text>
+  <text x="94" y="814" font-size="11" fill="#3A4652">surfaced once, then silent on repeat.</text>
   <rect x="345" y="728" width="245" height="128" rx="8" fill="#FFFFFF" stroke="#C7D0D8" stroke-dasharray="4 3"/>
   <text x="359" y="749" font-size="12" font-weight="700" fill="#3A4652">Gateway + Scheduler</text>
   <text x="359" y="769" font-size="11" fill="#3A4652">Feeds (USCIS, Federal Register, DOS,</text>

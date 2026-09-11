@@ -42,9 +42,9 @@ fixtures/sample_case/   three synthetic specimen images + a recorded extraction
 fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
                         chart designation, one seeded case (see its README)
 fixtures/recalls/       one seeded receipt + a captured real CPSC recall
-deploy/   agentcore_entrypoint.py — AgentCore Runtime wrapper, not yet verified
-tests/    109 offline tests (rules, extraction, decision gate, bulletin poll,
-          recall pipeline, replay-safe dedup) + 4 opt-in live tests
+deploy/   agentcore_entrypoint.py — AgentCore Runtime entrypoint (deployed)
+tests/    113 offline tests (rules, extraction, decision gate, bulletin poll,
+          recall pipeline, replay-safe dedup, Runtime entrypoint) + 4 opt-in live
 ```
 
 **The rules engine is deterministic Python, not an LLM judgment call.** The model is only ever called for two things: extracting fields from a document, and writing the plain-English wrapper around a rules-engine result it cannot alter. See `docs/architecture-spec.md` §4.2 for why this boundary is enforced in code rather than in a prompt.
@@ -67,9 +67,32 @@ All four run from the demo controls in the UI, on a clean `data/demo.db`:
 - **Sample case only, no real document uploads** in the live demo — `fixtures/sample_case/specimens/` holds three synthetic images (invented identity and dates in the real I-94/I-797/passport format) and `recorded_extraction_response.json` is what Bedrock returned for them, so nobody uploads real immigration documents to a hackathon URL. With AWS credentials the same specimens go through live Bedrock extraction.
 - **The bulletin beat is a historical replay, not a live fetch.** travel.state.gov blocks automated fetching, so the September and October 2025 bulletins are captured fixtures; their provenance and corroborating sources are in `fixtures/bulletins/README.md`.
 
+## AgentCore Runtime (deployed)
+
+The same pipeline runs on Amazon Bedrock AgentCore Runtime through `deploy/agentcore_entrypoint.py`, with no engine or pack logic changed. Deployed 2026-09-11 as a direct code deploy (no container), observability on (CloudWatch logs and X-Ray traces), memory off:
+
+```
+arn:aws:bedrock-agentcore:us-east-1:654654285440:runtime/immigration_status_guardian-SCAdbeBj6Z
+```
+
+Payloads: `{}` runs the sample case with recorded extraction, `{"extraction": "live"}` runs live Bedrock extraction, `{"fields": {...}}` skips extraction and runs the rule on the given dates. Verified in the cloud: the first invoke surfaces the 55-day gap with an attorney draft, the second is silent and returns the same draft.
+
+To deploy your own copy:
+
+```bash
+pip install -e ".[deploy]" bedrock-agentcore-starter-toolkit
+agentcore configure -e deploy/agentcore_entrypoint.py -n immigration_status_guardian \
+  -ni --region us-east-1 --disable-memory --deployment-type direct_code_deploy
+# In .bedrock_agentcore.yaml set source_path to the repo root, so agent/ and fixtures/ ship.
+agentcore deploy
+agentcore invoke '{}'
+```
+
+Notes: the toolkit resolves dependencies from the root `requirements.txt`, which exists only for that purpose. AWS now recommends the Node CLI (`npm install -g @aws/agentcore`); the Python toolkit still deploys. Draft personalization needs Bedrock model access on the account; without it the response carries `used_llm_personalization: false` and the deterministic core ships alone.
+
 ## Production path (not built for this deadline)
 
-AgentCore Memory, Identity (Cognito), Policy (Cedar), Observability (OTEL), and Gateway-brokered auth for the external feeds are real requirements for shipping this beyond a demo — see `docs/architecture-spec.md` §4.6 for the design. AgentCore Runtime deployment is a time-boxed Day-3 item: `deploy/agentcore_entrypoint.py` wraps the same pipeline without changing any of the logic above, but has not yet been verified against a live Runtime.
+AgentCore Memory, Identity (Cognito), Policy (Cedar), Observability (OTEL), and Gateway-brokered auth for the external feeds are real requirements for shipping this beyond a demo — see `docs/architecture-spec.md` §4.6 for the design. AgentCore Runtime itself is deployed and verified (section above); the rest of this list is design only.
 
 ## Setup
 
@@ -78,7 +101,7 @@ Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS crede
 ```bash
 python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                             # 109 offline tests, no AWS credentials required
+pytest                             # 113 offline tests, no AWS credentials required
 pytest -m live                     # 4 live tests: need Bedrock access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```
