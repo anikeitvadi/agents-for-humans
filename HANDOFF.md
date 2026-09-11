@@ -1,8 +1,23 @@
-# Handoff (updated 2026-09-11 AM)
+# Handoff (updated 2026-09-11 midday)
+
+**Session 2026-09-11 midday (Claude, on Ani's machine):** AWS credentials configured locally (IAM user `hackathon`, AdministratorAccess, account 654654285440, us-east-1). **Bedrock is blocked account-wide:** every model in every region returns `ValidationException: Error 002: Access to Bedrock models is not allowed for this account`; not an org/SCP issue (account is not in an organization); the Anthropic use-case form is also unfilled. Community reports say this is a new-account verification hold cleared only by an AWS Support case (Account & billing, free tier is fine). Until it clears: extraction runs `recorded`, drafts use the deterministic core (Strands Agent call fails and falls back), `pytest -m live` fails with Error 002 (3 of 4; the CPSC one passes). Nothing in the demo is broken by this; it just isn't "live".
+
+Code changes this session: `deploy/agentcore_entrypoint.py` rewritten (wires the Strands agent, sys.path bootstrap so `agent` imports when run as a script, env-overridable DB path with mkdir, two payload shapes `{}` = recorded sample case / `{"fields": ...}` = rule only, `"extraction": "live"` opt-in); `deploy/requirements.txt` for direct code deploy; `tests/test_agentcore_entrypoint.py` (3 tests); `tests/conftest.py` hides ambient AWS credentials from offline tests (without it, 4 app tests hit Bedrock on any machine with `~/.aws`); `run_sample_case` now returns an `error` result when the extraction API call raises instead of crashing (test added). Suite: 113 passed offline. Entrypoint smoke-tested locally on :8080 with all payload shapes.
+
+AgentCore deploy: configured with the (deprecated but working) Python starter toolkit `bedrock-agentcore-starter-toolkit 0.3.12`, `.bedrock_agentcore.yaml` (gitignored) with `source_path` set to the repo root so `agent/` and `fixtures/` ship; module resolves to `deploy.agentcore_entrypoint:app`; direct_code_deploy, memory disabled, OTEL on, execution role + S3 auto-create. **`agentcore deploy` has not been run yet** (harness blocked Claude from creating cloud resources; Ani runs it: `AGENTCORE_SUPPRESS_RECOMMENDATION=1 .venv/bin/agentcore deploy`, then `agentcore invoke '{}'`). AWS now recommends the Node CLI `npm install -g @aws/agentcore`; the Python toolkit still deploys.
+
+**Next steps, in order (as of 2026-09-11 midday):**
+1. **Open the AWS Support case for Bedrock Error 002** (console: Support Center → Create case → Account and billing → "Bedrock access blocked, Error 002, new account"). Both builders' accounts if the partner's is also new.
+2. **Run `agentcore deploy`** from the repo root, then `agentcore invoke '{}'` twice (surfaced, then silent) and record the agent ARN + invoke output in this file and the README's AgentCore section.
+3. **Flip the repo public**, confirm MIT shows in About.
+4. Ownership split + repo name (still open).
+5. Once Bedrock unblocks: `pytest -m live`, invoke the Runtime with `{"extraction": "live"}`, confirm `used_llm_personalization: true` in the draft.
+6. Video + three builder.aws posts.
+
 
 **Session 2026-09-11 AM (Claude, on Ani's machine):** pulled merged `main` (PR #1), created `.venv` locally (uv, Python 3.13), `pytest -q` → 109 passed, 4 deselected. Ran the real app (`uvicorn agent.app:app`) and hit every endpoint on a clean `data/demo.db`: sample case surfaces with draft, repeat is silent with the same draft; bulletin Sep silent / Oct surfaced with draft; recall `mode: live` against CPSC, surfaced then silent on repeat, unmatched receipt silent. Partner (DarshanHari19) has **accepted** the collaborator invite (write). Repo is still **private**. No AWS CLI, credentials, or `agentcore` CLI on this machine. Changes this session: README reconciled with the real code (module map, demo flows, scope limits, setup; stale `fields.json` and "50 tests" removed) and `docs/architecture.svg` added (built vs. production path), embedded in the README.
 
-**Next steps, in order (as of 2026-09-11 AM):**
+**Next steps as of 2026-09-11 AM (superseded by the midday list above):**
 1. **AWS credits: claim by TODAY Fri Sep 11, 12pm PT, per person** (rule in `docs/brief.md`). Both builders.
 2. **Flip the repo public** and confirm "MIT License" shows in the GitHub About section. Required for submission; everything in the repo is already clean for it.
 3. **Decide ownership split and repo name** (placeholder "Clockwork" vs. current "Immigration Status Guardian"). Blocks splitting the remaining work.

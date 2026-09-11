@@ -64,3 +64,28 @@ def test_run_sample_case_does_not_run_the_rule_when_extraction_needs_review(tmp_
     assert result.error is not None
     assert result.alert is None
     assert result.draft is None
+
+
+class _RaisingClient:
+    """Stands in for a Bedrock client whose Converse call fails outright
+    (account block, network, throttling) rather than returning bad JSON."""
+
+    def converse(self, **kwargs):
+        raise RuntimeError("Error 002: Access to Bedrock models is not allowed for this account")
+
+
+def test_extraction_api_failure_is_a_visible_error_not_a_crash(tmp_path):
+    from agent.engine.store import Store
+    from agent.packs.immigration.pipeline import run_sample_case
+
+    store = Store(str(tmp_path / "ledger.db"))
+
+    result = run_sample_case(
+        store, clock_id="c1", event_id="evt-1", client=_RaisingClient(), mode="live", model_id="m"
+    )
+
+    assert result.alert is None
+    assert result.draft is None
+    assert result.extraction.mode == "live"
+    assert result.extraction.needs_review is True
+    assert "Error 002" in result.error

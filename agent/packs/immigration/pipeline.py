@@ -94,7 +94,15 @@ def run_sample_case(
     extraction result that needs review must block the rule rather than
     feed a null/ambiguous value into date arithmetic (F4's contract applies
     upstream of the rule too)."""
-    extraction = extract_sample_case_fields(client, mode=mode, model_id=model_id)
+    try:
+        extraction = extract_sample_case_fields(client, mode=mode, model_id=model_id)
+    except Exception as exc:  # noqa: BLE001 - a model/API failure must surface as a visible error, never a crash
+        return SampleCaseResult(
+            alert=None,
+            draft=None,
+            extraction=SampleCaseExtraction(mode=mode, needs_review=True),
+            error=f"Document extraction failed ({type(exc).__name__}): {exc}",
+        )
 
     if extraction.needs_review:
         return SampleCaseResult(
