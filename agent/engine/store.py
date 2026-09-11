@@ -7,6 +7,7 @@ duplicate alerts.
 import json
 import sqlite3
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from agent.engine.schema import Alert, Event
 
@@ -38,6 +39,15 @@ CREATE TABLE IF NOT EXISTS drafts (
     used_llm_personalization INTEGER,
     PRIMARY KEY (clock_id, event_id, rule_version)
 );
+
+CREATE TABLE IF NOT EXISTS action_receipts (
+    clock_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    rule_version TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (clock_id, event_id, rule_version, action_type)
+);
 """
 
 
@@ -47,6 +57,19 @@ class DraftRecord:
     subject: str | None
     body: str | None
     used_llm_personalization: bool | None
+
+
+@dataclass
+class ActionReceipt:
+    """Proof that a human took an action on a specific clock/event/rule
+    version. Idempotent: the first record wins, repeats return it."""
+
+    clock_id: str
+    event_id: str
+    rule_version: str
+    action_type: str
+    created_at: str  # ISO-8601 UTC
+    already_recorded: bool = False
 
 
 class Store:
@@ -160,6 +183,39 @@ class Store:
             body=row[2],
             used_llm_personalization=None if row[3] is None else bool(row[3]),
         )
+
+    def record_action(self, clock_id: str, event_id: str, rule_version: str, action_type: str) -> ActionReceipt:
+        """Insert-once: a second call for the same key returns the original
+        receipt with already_recorded=True and changes nothing."""
+        now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        cursor = self._conn.execute(
+            "INSERT OR IGNORE INTO action_receipts (clock_id, event_id, rule_version, action_type, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (clock_id, event_id, rule_version, action_type, now),
+        )
+        self._conn.commit()
+        receipt = self.get_action(clock_id, event_id, rule_version, action_type)
+        assert receipt is not None
+        receipt.already_recorded = cursor.rowcount == 0
+        return receipt
+
+    def get_action(self, clock_id: str, event_id: str, rule_version: str, action_type: str) -> ActionReceipt | None:
+        row = self._conn.execute(
+            "SELECT created_at FROM action_receipts "
+            "WHERE clock_id = ? AND event_id = ? AND rule_version = ? AND action_type = ?",
+            (clock_id, event_id, rule_version, action_type),
+        ).fetchone()
+        if row is None:
+            return None
+        return ActionReceipt(
+            clock_id=clock_id, event_id=event_id, rule_version=rule_version, action_type=action_type, created_at=row[0]
+        )
+
+    def reset(self) -> None:
+        """Wipe the demo ledger (events, alerts, drafts, receipts). Demo-only."""
+        for table in ("events", "alerts", "drafts", "action_receipts"):
+            self._conn.execute(f"DELETE FROM {table}")
+        self._conn.commit()
 
     def list_alerts(self, clock_id: str) -> list[Alert]:
         rows = self._conn.execute(

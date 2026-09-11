@@ -60,7 +60,46 @@ def _document_name_from_request(kwargs: dict) -> str:
     raise ValueError("Converse request did not include a document block")
 
 
-def build_extraction_client(region_name: str = "us-east-1") -> tuple[object, ExtractionMode]:
-    if has_aws_credentials():
-        return build_live_bedrock_client(region_name=region_name), "live"
-    return RecordedResponseClient(), "recorded"
+def _describe_failure(exc: Exception) -> str:
+    """Short, human-readable cause: botocore's own message when present
+    (e.g. "ValidationException: Error 002: ..."), else the exception."""
+    response = getattr(exc, "response", None)
+    if isinstance(response, dict) and isinstance(response.get("Error"), dict):
+        error = response["Error"]
+        return f"{error.get('Code', type(exc).__name__)}: {error.get('Message', '')}"[:200]
+    return f"{type(exc).__name__}: {str(exc)[:160]}"
+
+
+class FailoverExtractionClient:
+    """Tries live Bedrock first and falls back to the recorded replay on the
+    first API failure (denied account, no model access, network), then stays
+    on the replay for the life of the process. Credentials being present is
+    not proof that Bedrock works, so the truthful mode is only known after a
+    call: read `mode` and `fallback_reason` after extraction, never before.
+
+    A batch that fails over part-way is labeled "recorded", never "live":
+    the label errs toward the less impressive claim.
+    """
+
+    def __init__(self, live_client=None, recorded_client: RecordedResponseClient | None = None):
+        self._live = live_client
+        self._recorded = recorded_client if recorded_client is not None else RecordedResponseClient()
+        self.mode: ExtractionMode = "live" if live_client is not None else "recorded"
+        self.fallback_reason: str | None = None if live_client is not None else "no AWS credentials configured"
+
+    def converse(self, **kwargs):
+        if self._live is not None and self.mode == "live":
+            try:
+                return self._live.converse(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - any live failure must degrade, never crash the demo
+                self.mode = "recorded"
+                self.fallback_reason = f"live Bedrock extraction unavailable ({_describe_failure(exc)}); replaying the recorded response"
+        return self._recorded.converse(**kwargs)
+
+
+def build_extraction_client(region_name: str = "us-east-1") -> tuple[FailoverExtractionClient, ExtractionMode]:
+    """Returns the failover client and its *initial* mode. The mode after a
+    call is on the client itself (`client.mode`)."""
+    live = build_live_bedrock_client(region_name=region_name) if has_aws_credentials() else None
+    client = FailoverExtractionClient(live)
+    return client, client.mode

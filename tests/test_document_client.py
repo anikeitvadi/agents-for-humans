@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agent.llm.document_client import RecordedResponseClient, build_extraction_client
+from agent.llm.document_client import FailoverExtractionClient, RecordedResponseClient, build_extraction_client
 from agent.llm.extract import extract_fields
 
 
@@ -90,7 +90,9 @@ def test_build_extraction_client_uses_recorded_mode_without_aws_credentials():
         client, mode = build_extraction_client()
 
     assert mode == "recorded"
-    assert isinstance(client, RecordedResponseClient)
+    assert isinstance(client, FailoverExtractionClient)
+    assert client.mode == "recorded"
+    assert "no AWS credentials" in client.fallback_reason
 
 
 def test_build_extraction_client_uses_live_mode_with_aws_credentials():
@@ -99,5 +101,9 @@ def test_build_extraction_client_uses_live_mode_with_aws_credentials():
     ):
         client, mode = build_extraction_client()
 
+    # Credentials are only the *intent* to go live; the failover client
+    # proves it per call and downgrades the label on the first failure.
     assert mode == "live"
-    assert client == "fake-boto3-client"
+    assert isinstance(client, FailoverExtractionClient)
+    assert client.mode == "live"
+    assert client.fallback_reason is None

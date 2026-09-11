@@ -29,6 +29,11 @@ def test_ask_runs_the_agent_with_an_injected_model(tmp_path):
     assert body["tools_called"] == ["run_sample_case_check"]
     assert "draft is ready" in body["answer"]
     assert body["error"] is None
+    assert body["question"] == "Check the sample case."
+    assert body["trace"][0]["tool"] == "run_sample_case_check"
+    assert body["trace"][0]["decision"] == "surfaced"
+    assert body["trace"][0]["mode"] == "recorded"
+    assert body["trace"][0]["persisted_draft"] is True
 
     # The agent's tool wrote to the same ledger the UI reads: the sample case
     # is now already flagged, so the UI path stays silent and keeps the draft.

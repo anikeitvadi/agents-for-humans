@@ -36,6 +36,7 @@ class SampleCaseExtraction:
     statuses: dict[str, str] = field(default_factory=dict)
     needs_review: bool = False
     mode: str = "recorded"
+    mode_reason: str | None = None
 
 
 def extract_sample_case_fields(client, mode: str, model_id: str) -> SampleCaseExtraction:
@@ -69,6 +70,11 @@ def extract_sample_case_fields(client, mode: str, model_id: str) -> SampleCaseEx
         if result.needs_review:
             extraction.needs_review = True
 
+    # A failover client knows what actually served the calls; the caller's
+    # label was only the intent. Truthful mode wins (never "live" after a
+    # fallback).
+    extraction.mode = getattr(client, "mode", mode)
+    extraction.mode_reason = getattr(client, "fallback_reason", None)
     return extraction
 
 

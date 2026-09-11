@@ -125,3 +125,51 @@ def test_each_question_starts_a_fresh_conversation(tools):
     ask_guardian(model, tools, "two")
 
     assert len(model.calls[1]["messages"]) == 1
+
+
+def test_trace_matches_the_real_tool_call_and_result(tools):
+    model = ScriptedModel(
+        [
+            ("tool", "check_document_dates", {"i94_admit_until": "2026-11-03", "i797_valid_until": "2026-12-28"}),
+            ("text", "They disagree by 55 days."),
+        ]
+    )
+
+    result = ask_guardian(model, tools, "Do my documents disagree?")
+
+    assert len(result.trace) == 1
+    step = result.trace[0]
+    assert step.step == 1
+    assert step.tool == "check_document_dates"
+    assert step.input == {"i94_admit_until": "2026-11-03", "i797_valid_until": "2026-12-28"}
+    assert step.status == "success"
+    assert step.tool_use_id == model.last_tool_result()["toolUseId"]
+    assert step.mode is None and step.decision is None  # pure rule, no gate involved
+    assert "55 day" in step.summary
+    assert result.trace_dicts()[0]["tool"] == "check_document_dates"
+
+
+def test_trace_carries_mode_gate_and_persistence_facts(tools):
+    model = ScriptedModel([("tool", "run_sample_case_check", {}), ("text", "One thing needs review.")])
+
+    step = ask_guardian(model, tools, "Check the sample case.").trace[0]
+
+    assert step.mode == "recorded"
+    assert step.decision == "surfaced"
+    assert "novelty" in step.reason
+    assert step.persisted_draft is True
+
+
+def test_trace_records_tool_errors(tools):
+    model = ScriptedModel([("tool", "check_visa_bulletin", {"month": "1999-01"}), ("text", "That month is not available.")])
+
+    step = ask_guardian(model, tools, "What about January 1999?").trace[0]
+
+    assert step.status == "error"
+    assert step.input == {"month": "1999-01"}
+    assert "no captured bulletin" in step.summary
+
+
+def test_trace_is_empty_when_no_tool_was_called(tools):
+    result = ask_guardian(ScriptedModel([("text", "I can only check documents, bulletins, and recalls.")]), tools, "hi")
+    assert result.trace == [] and result.tools_called == []

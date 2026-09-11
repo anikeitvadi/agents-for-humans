@@ -24,7 +24,13 @@
     --sans: "IBM Plex Sans", -apple-system, sans-serif;
   }
   * { box-sizing: border-box; }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
+  .error-banner { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 0; padding: 10px 14px; border-radius: 6px;
+    border: 1px solid var(--review); background: var(--review-wash); color: var(--ink); font-size: 13.5px; }
+  .error-banner-text { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .error-banner button { font: 500 12.5px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
+    border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+  .mode-note { font-size: 12px; color: var(--ink-3); margin: 6px 0 10px; max-width: 40ch; }
   .ask { margin: 26px 0 6px; }
   .ask-form { display: flex; gap: 8px; }
   .ask-input { flex: 1; min-width: 0; font: 14px var(--sans); padding: 9px 12px; border-radius: 6px; border: 1px solid var(--rule);
@@ -39,6 +45,18 @@
   .ask-answer-text { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
   .ask-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
   .ask-tool { font: 11.5px var(--mono); padding: 2px 8px; border-radius: 4px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .trace { margin-top: 12px; }
+  .trace-heading { font-size: 12px; color: var(--ink-3); margin: 0 0 4px; }
+  .trace-step { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 5px 0; border-top: 1px solid var(--rule); font-size: 12.5px; }
+  .trace-step:first-of-type { border-top: none; }
+  .trace-num { color: var(--ink-3); font-family: var(--mono); }
+  .trace-line { color: var(--ink-2); }
+  .trace-line .tool { font-family: var(--mono); color: var(--ink); }
+  .trace-line .pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 6px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .trace-line .pill.surfaced { background: var(--review-wash); color: var(--review); }
+  .trace-line .pill.silent { background: var(--accent-wash); color: var(--accent); }
+  .trace-line .pill.error { background: var(--review-wash); color: var(--review); }
+  .trace-summary { display: block; color: var(--ink-3); margin-top: 2px; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 72px; }
@@ -154,6 +172,10 @@
   .overlay-subject { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
   .overlay-mode { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
   .overlay-body { white-space: pre-wrap; font-size: 14px; color: var(--ink-2); }
+  .overlay-actions { margin: 0 0 18px; padding: 12px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .overlay-approved { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--accent); margin: 0; }
+  .overlay-approved svg { width: 15px; height: 15px; }
+  .overlay-hint { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; }
 
   @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.001ms !important; } }
 </style>
@@ -171,7 +193,12 @@
     </nav>
   </header>
 
-  <p class="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
+  <div class="error-banner hidden" id="error-banner" role="alert">
+    <span class="error-banner-text" id="error-text"></span>
+    <button type="button" id="error-dismiss">Dismiss</button>
+  </div>
+
+  <p class="legal-note" id="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
 
   <main id="panel-case" class="panel">
     <section class="review" id="review">
@@ -210,6 +237,7 @@
       </section>
       <aside>
         <h2 class="section-heading">Documents</h2>
+        <p class="mode-note hidden" id="mode-note"></p>
         <div class="doc-list" id="doc-list"></div>
       </aside>
     </div>
@@ -225,6 +253,7 @@
       <div class="ask-answer hidden" id="ask-answer">
         <p class="ask-answer-text" id="ask-answer-text"></p>
         <div class="ask-tools" id="ask-tools"></div>
+        <div class="trace hidden" id="ask-trace"></div>
       </div>
     </section>
 
@@ -236,6 +265,7 @@
         <button class="btn-quiet" id="gate-btn">Inspect decision gate</button>
         <button class="btn-quiet" id="bulletin-sep-btn">Replay September update</button>
         <button class="btn-quiet" id="bulletin-oct-btn">Replay October update</button>
+        <button class="btn-quiet" id="reset-btn">Reset demo</button>
       </div>
       <div class="gate-illustration hidden" id="gate-illustration">
         <h2 class="section-heading" style="margin-top:16px">How the decision gate filters events</h2>
@@ -280,6 +310,11 @@
     <button class="overlay-close" id="draft-close">Close</button>
     <p class="overlay-subject" id="draft-subject"></p>
     <p class="overlay-mode" id="draft-mode"></p>
+    <div class="overlay-actions hidden" id="draft-actions">
+      <button class="btn-primary" id="draft-approve-btn" type="button">Approve for attorney review</button>
+      <p class="overlay-approved hidden" id="draft-approved"></p>
+      <p class="overlay-hint">Approval records a receipt on this clock, event, and rule version. Nothing is sent: this demo has no mail transport.</p>
+    </div>
     <p class="overlay-body" id="draft-body"></p>
   </div>
 </div>
@@ -311,6 +346,71 @@ function icon(name) {
 
 function renderIcons() {
   if (window.lucide) window.lucide.createIcons();
+}
+
+// --- Errors are always visible ---------------------------------------------
+// Every network call goes through apiFetch, every button through runAction.
+// A failed request (non-2xx, non-JSON, timeout, network) lands in the
+// banner with a useful message; nothing fails silently.
+
+const errorBanner = document.getElementById('error-banner');
+const errorText = document.getElementById('error-text');
+function showError(message) {
+  errorText.textContent = message;
+  errorBanner.classList.remove('hidden');
+}
+function clearError() {
+  errorBanner.classList.add('hidden');
+  errorText.textContent = '';
+}
+document.getElementById('error-dismiss').addEventListener('click', clearError);
+window.addEventListener('unhandledrejection', (e) => showError('Unexpected error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+window.addEventListener('error', (e) => showError('Unexpected error: ' + e.message));
+
+async function apiFetch(path, { method = 'GET', body, timeoutMs = 20000 } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err && err.name === 'AbortError') throw new Error(`${method} ${path} timed out after ${Math.round(timeoutMs / 1000)}s`);
+    throw new Error(`${method} ${path}: network error (is the server running?)`);
+  }
+  clearTimeout(timer);
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
+  if (!response.ok) {
+    const detail = data && (data.error || data.detail || data.message);
+    const message = typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : text.slice(0, 200));
+    throw new Error(`${method} ${path} returned ${response.status}: ${message || response.statusText}`);
+  }
+  if (data === null) throw new Error(`${method} ${path} returned a non-JSON response`);
+  return data;
+}
+
+async function runAction(label, button, fn) {
+  clearError();
+  if (button) button.disabled = true;
+  try {
+    await fn();
+  } catch (err) {
+    showError(`${label} failed: ${err && err.message ? err.message : err}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function extractionModeLabel(mode, reason) {
+  if (mode === 'live') return 'Live Bedrock parse';
+  return reason && /unavailable/.test(reason) ? 'Recorded replay · live Bedrock unavailable' : 'Recorded demo';
 }
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -380,10 +480,48 @@ function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
 
 const overlay = document.getElementById('draft-overlay');
 const overlayPanel = document.getElementById('draft-panel');
+const draftActions = document.getElementById('draft-actions');
+const draftApproveBtn = document.getElementById('draft-approve-btn');
+const draftApproved = document.getElementById('draft-approved');
+let currentDraft = null;
+
+function renderApproval(draft) {
+  if (!draft || draft.kind !== 'attorney_review' || !draft.ref) { draftActions.classList.add('hidden'); return; }
+  draftActions.classList.remove('hidden');
+  if (draft.approved_at) {
+    draftApproveBtn.classList.add('hidden');
+    draftApproved.replaceChildren(icon('check-circle'),
+      document.createTextNode(`Approved and ready to send · ${new Date(draft.approved_at).toLocaleString()}`));
+    draftApproved.classList.remove('hidden');
+    renderIcons();
+  } else {
+    draftApproveBtn.classList.remove('hidden');
+    draftApproved.classList.add('hidden');
+  }
+}
+
+draftApproveBtn.addEventListener('click', () => runAction('Approve for attorney review', draftApproveBtn, async () => {
+  const draft = currentDraft;
+  const res = await apiFetch('/api/drafts/approve', { method: 'POST', body: draft.ref });
+  draft.approved_at = res.receipt.created_at;
+  renderApproval(draft);
+  if (!res.already_approved) {
+    addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
+      label: `Approved for attorney review — ${draft.subject}`,
+      outcome: { label: 'Approved and ready to send', tone: 'quiet', icon: 'check-circle' },
+      detail: `receipt ${res.receipt.action_type} on ${res.receipt.clock_id} / ${res.receipt.event_id} / ${res.receipt.rule_version} at ${res.receipt.created_at}`,
+    });
+  }
+}));
+
 function openDraft(draft, modeLabel) {
+  currentDraft = draft;
   document.getElementById('draft-subject').textContent = draft.subject;
-  document.getElementById('draft-mode').textContent = modeLabel || '';
+  const intro = draft.used_llm_personalization === undefined ? ''
+    : (draft.used_llm_personalization ? ' · intro written by the model' : ' · deterministic text only, no model intro');
+  document.getElementById('draft-mode').textContent = (modeLabel || '') + intro;
   document.getElementById('draft-body').textContent = draft.body;
+  renderApproval(draft);
   overlay.classList.add('open');
   fx(overlayPanel, { transform: ['translateX(100%)', 'translateX(0%)'] }, { duration: 0.35, easing: 'ease-out' });
 }
@@ -401,10 +539,14 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.
 // --- Case review tab --------------------------------------------------------
 
 async function loadSampleCase() {
-  const extraction = await fetch('/api/sample-case').then(r => r.json());
-  const modeLabel = extraction.mode === 'live' ? 'Live Bedrock parse' : 'Recorded demo';
+  const extraction = await apiFetch('/api/sample-case');
+  const modeLabel = extractionModeLabel(extraction.mode, extraction.mode_reason);
   caseMetaLabel = `Sample case · ${modeLabel}`;
   updateTopMeta();
+  const modeNote = document.getElementById('mode-note');
+  modeNote.textContent = extraction.mode === 'live' ? 'Fields parsed live by Bedrock from the specimen images.'
+    : `Recorded replay of the Bedrock response for these specimens. ${extraction.mode_reason || ''}`.trim();
+  modeNote.classList.remove('hidden');
 
   const docList = document.getElementById('doc-list');
   docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map(key => {
@@ -423,7 +565,7 @@ async function loadSampleCase() {
   }));
   renderIcons();
 
-  const result = await fetch('/api/process-sample-case', { method: 'POST' }).then(r => r.json());
+  const result = await apiFetch('/api/process-sample-case', { method: 'POST' });
   const reviewEmpty = document.getElementById('review-empty');
   const reviewLoaded = document.getElementById('review-loaded');
   reviewEmpty.classList.add('hidden');
@@ -487,9 +629,7 @@ document.getElementById('view-docs-btn').addEventListener('click', () => {
 });
 
 async function pollBulletin(month, label) {
-  const result = await fetch('/api/bulletin-poll', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month })
-  }).then(r => r.json());
+  const result = await apiFetch('/api/bulletin-poll', { method: 'POST', body: { month } });
 
   if (result.error) {
     addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
@@ -508,7 +648,7 @@ async function pollBulletin(month, label) {
 }
 
 async function showGateDemo() {
-  const data = await fetch('/api/gate-demo').then(r => r.json());
+  const data = await apiFetch('/api/gate-demo');
   const rows = document.getElementById('gate-rows');
   rows.replaceChildren(...data.results.map(r => {
     const outcome = r.decision === 'surfaced' ? { label: 'Needs review', tone: 'review' } : { label: 'No new notification', tone: 'routine' };
@@ -519,10 +659,14 @@ async function showGateDemo() {
   document.getElementById('gate-illustration').classList.remove('hidden');
 }
 
-document.getElementById('load-btn').addEventListener('click', loadSampleCase);
-document.getElementById('gate-btn').addEventListener('click', showGateDemo);
-document.getElementById('bulletin-sep-btn').addEventListener('click', () => pollBulletin('2025-09', 'September 2025'));
-document.getElementById('bulletin-oct-btn').addEventListener('click', () => pollBulletin('2025-10', 'October 2025'));
+const loadBtn = document.getElementById('load-btn');
+const gateBtn = document.getElementById('gate-btn');
+const sepBtn = document.getElementById('bulletin-sep-btn');
+const octBtn = document.getElementById('bulletin-oct-btn');
+loadBtn.addEventListener('click', () => runAction('Load sample case', loadBtn, loadSampleCase));
+gateBtn.addEventListener('click', () => runAction('Inspect decision gate', gateBtn, showGateDemo));
+sepBtn.addEventListener('click', () => runAction('Replay September update', sepBtn, () => pollBulletin('2025-09', 'September 2025')));
+octBtn.addEventListener('click', () => runAction('Replay October update', octBtn, () => pollBulletin('2025-10', 'October 2025')));
 
 // --- Ask the guardian (a Strands agent over the engine's checks) ---------
 
@@ -532,6 +676,34 @@ const askBtn = document.getElementById('ask-btn');
 const askAnswer = document.getElementById('ask-answer');
 const askAnswerText = document.getElementById('ask-answer-text');
 const askTools = document.getElementById('ask-tools');
+const askTrace = document.getElementById('ask-trace');
+
+// Inspectable execution facts only: which tool the agent selected, the
+// input it passed, the data mode, the deterministic gate result, and
+// whether a draft was persisted. Nothing here is model reasoning.
+function renderTrace(question, steps) {
+  askTrace.replaceChildren();
+  if (!steps || !steps.length) { askTrace.classList.add('hidden'); return; }
+  askTrace.append(el('p', { className: 'trace-heading', text: 'Decision trace' }));
+  const ask = el('div', { className: 'trace-step' });
+  ask.append(el('span', { className: 'trace-num', text: '0' }), el('span', { className: 'trace-line', text: `Request: ${question}` }));
+  askTrace.append(ask);
+  for (const step of steps) {
+    const row = el('div', { className: 'trace-step' });
+    const line = el('span', { className: 'trace-line' });
+    line.append(el('span', { className: 'tool', text: step.tool }));
+    const inputText = Object.entries(step.input || {}).map(([k, v]) => `${k}=${v}`).join(', ');
+    if (inputText) line.append(document.createTextNode(`(${inputText})`));
+    line.append(el('span', { className: `pill ${step.status === 'error' ? 'error' : ''}`, text: step.status }));
+    if (step.mode) line.append(el('span', { className: 'pill', text: `mode: ${step.mode}` }));
+    if (step.decision) line.append(el('span', { className: `pill ${step.decision}`, text: `gate: ${step.decision}` }));
+    if (step.persisted_draft) line.append(el('span', { className: 'pill', text: 'draft persisted' }));
+    if (step.summary) line.append(el('span', { className: 'trace-summary', text: step.reason && step.summary !== step.reason ? `${step.summary} · ${step.reason}` : step.summary }));
+    row.append(el('span', { className: 'trace-num', text: String(step.step) }), line);
+    askTrace.append(row);
+  }
+  askTrace.classList.remove('hidden');
+}
 const ASK_SUGGESTIONS = [
   'My I-94 says 2026-11-03 and my I-797 says 2026-12-28. Do they disagree?',
   'Run the sample case check.',
@@ -551,10 +723,9 @@ async function askGuardian(question) {
   askAnswer.classList.remove('hidden', 'error');
   askAnswerText.textContent = 'Running the check…';
   askTools.replaceChildren();
+  renderTrace(question, []);
   try {
-    const res = await fetch('/api/ask', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }),
-    }).then(r => r.json());
+    const res = await apiFetch('/api/ask', { method: 'POST', body: { question }, timeoutMs: 60000 });
     if (!res.available || res.error) {
       askAnswer.classList.add('error');
       askAnswerText.textContent = res.error || 'The guardian is unavailable right now.';
@@ -563,6 +734,7 @@ async function askGuardian(question) {
       askAnswerText.textContent = res.answer;
       for (const name of res.tools_called) askTools.append(el('span', { className: 'ask-tool', text: name }));
       if (!res.tools_called.length) askTools.append(el('span', { className: 'ask-tool', text: 'no tool called' }));
+      renderTrace(res.question || question, res.trace);
     }
   } catch (err) {
     askAnswer.classList.add('error');
@@ -576,12 +748,8 @@ askForm.addEventListener('submit', (e) => { e.preventDefault(); const q = askInp
 // --- Recall tab --------------------------------------------------------------
 
 async function runRecallDemo() {
-  const matched = await fetch('/api/recalls/check', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'seeded' })
-  }).then(r => r.json());
-  const unmatched = await fetch('/api/recalls/check', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: 'unmatched' })
-  }).then(r => r.json());
+  const matched = await apiFetch('/api/recalls/check', { method: 'POST', body: { receipt: 'seeded' } });
+  const unmatched = await apiFetch('/api/recalls/check', { method: 'POST', body: { receipt: 'unmatched' } });
 
   const feedLabel = matched.mode === 'live' ? 'Live CPSC feed' : 'Recorded demo (feed unavailable)';
   recallMetaLabel = `Recall demo · ${feedLabel}`;
@@ -621,7 +789,8 @@ async function runRecallDemo() {
   });
 }
 
-document.getElementById('recall-btn').addEventListener('click', runRecallDemo);
+const recallBtn = document.getElementById('recall-btn');
+recallBtn.addEventListener('click', () => runAction('Run recall demo', recallBtn, runRecallDemo));
 
 // --- Tabs --------------------------------------------------------------------
 
@@ -630,8 +799,15 @@ const tabRecall = document.getElementById('tab-recall');
 const panelCase = document.getElementById('panel-case');
 const panelRecall = document.getElementById('panel-recall');
 
+const LEGAL_NOTES = {
+  case: 'Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.',
+  recall: 'Demo scope — one seeded receipt matched exactly against the CPSC recall feed. Confirm any remedy on cpsc.gov before acting; this is not a product-safety determination.',
+};
+const legalNote = document.getElementById('legal-note');
+
 function selectTab(which) {
   const caseActive = which === 'case';
+  legalNote.textContent = LEGAL_NOTES[caseActive ? 'case' : 'recall'];
   tabCase.classList.toggle('active', caseActive);
   tabRecall.classList.toggle('active', !caseActive);
   tabCase.setAttribute('aria-selected', String(caseActive));
@@ -642,6 +818,37 @@ function selectTab(which) {
 }
 tabCase.addEventListener('click', () => selectTab('case'));
 tabRecall.addEventListener('click', () => selectTab('recall'));
+
+// --- Reset ---------------------------------------------------------------------
+
+const resetBtn = document.getElementById('reset-btn');
+resetBtn.addEventListener('click', () => runAction('Reset demo', resetBtn, async () => {
+  await apiFetch('/api/reset', { method: 'POST' });
+  location.reload();
+}));
+
+// --- Guided demo via URL (?demo=case|full|recall, &open=draft) -------------------
+// Runs the same buttons in order on load, for screenshots and rehearsals.
+// It never changes behavior when the parameter is absent.
+
+async function runGuidedDemo() {
+  const params = new URLSearchParams(location.search);
+  const demo = params.get('demo');
+  if (!demo) return;
+  await runAction('Guided demo', null, async () => {
+    if (demo === 'case' || demo === 'full') await loadSampleCase();
+    if (demo === 'full') {
+      await pollBulletin('2025-09', 'September 2025');
+      await pollBulletin('2025-10', 'October 2025');
+    }
+    if (demo === 'recall') { selectTab('recall'); await runRecallDemo(); }
+    if (params.get('open') === 'draft') {
+      const btn = demo === 'recall' ? document.getElementById('open-recall-draft-btn') : document.getElementById('open-draft-btn');
+      if (btn && btn.onclick) btn.onclick();
+    }
+  });
+}
+runGuidedDemo();
 
 // Lucide's <script defer> may not have finished loading yet when this
 // classic (non-deferred) script runs — nothing needs an icon before a user

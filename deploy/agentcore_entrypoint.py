@@ -106,8 +106,10 @@ def invoke(payload: dict | None) -> dict:
         result = ask_guardian(_guardian_model, _guardian_tools, str(payload["prompt"]))
         return {
             "path": "agent",
+            "question": str(payload["prompt"]),
             "answer": result.answer,
             "tools_called": result.tools_called,
+            "trace": result.trace_dicts(),
             "tools": names,
             "error": result.error,
         }

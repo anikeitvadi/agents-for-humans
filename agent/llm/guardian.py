@@ -200,10 +200,93 @@ def build_guardian_agent(model: Model, tools: list) -> Agent:
 
 
 @dataclass
+class TraceStep:
+    """One inspectable execution fact: which tool ran, on what input, and
+    what the deterministic engine returned. Never model reasoning."""
+
+    step: int
+    tool: str
+    tool_use_id: str
+    input: dict
+    status: str  # "success" | "error" | "missing" (tool was called but no result was recorded)
+    mode: str | None  # extraction_mode / feed_mode reported by the tool, if any
+    decision: str | None  # deterministic gate decision, if the tool ran the gate
+    reason: str | None
+    persisted_draft: bool
+    summary: str
+
+
+@dataclass
 class AskResult:
     answer: str
     tools_called: list[str] = field(default_factory=list)
+    trace: list[TraceStep] = field(default_factory=list)
     error: str | None = None
+
+    def trace_dicts(self) -> list[dict]:
+        return [dataclasses.asdict(step) for step in self.trace]
+
+
+def _safe_input(value: Any, limit: int = 120) -> Any:
+    if isinstance(value, dict):
+        return {k: _safe_input(v, limit) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_safe_input(v, limit) for v in value]
+    if isinstance(value, str) and len(value) > limit:
+        return value[:limit] + "…"
+    return value
+
+
+def build_trace(messages: list[dict]) -> list[TraceStep]:
+    """Pair every toolUse block the model emitted with the toolResult block
+    the agent fed back, in call order, straight from the Strands message
+    history. Only execution facts are extracted."""
+    results: dict[str, dict] = {}
+    for message in messages:
+        for block in message.get("content", []):
+            if "toolResult" in block:
+                results[block["toolResult"].get("toolUseId", "")] = block["toolResult"]
+
+    steps: list[TraceStep] = []
+    for message in messages:
+        for block in message.get("content", []):
+            if "toolUse" not in block:
+                continue
+            use = block["toolUse"]
+            result = results.get(use.get("toolUseId", ""))
+            payload: dict = {}
+            text = ""
+            status = "missing"
+            if result is not None:
+                status = result.get("status", "success")
+                for content in result.get("content", []):
+                    if "json" in content and isinstance(content["json"], dict):
+                        payload = content["json"]
+                        break
+                    if "text" in content and not text:
+                        text = content["text"]
+            summary = (
+                payload.get("error")
+                or payload.get("message")
+                or payload.get("reason")
+                or text
+                or ("no result recorded" if result is None else "")
+            )
+            steps.append(
+                TraceStep(
+                    step=len(steps) + 1,
+                    tool=use.get("name", "?"),
+                    tool_use_id=use.get("toolUseId", ""),
+                    input=_safe_input(use.get("input") or {}),
+                    status=status,
+                    mode=payload.get("extraction_mode") or payload.get("feed_mode"),
+                    decision=payload.get("decision"),
+                    reason=payload.get("reason"),
+                    persisted_draft=bool(payload.get("draft")),
+                    summary=str(summary)[:300],
+                )
+            )
+    return steps
 
 
 def ask_guardian(model: Model, tools: list, question: str) -> AskResult:
@@ -214,10 +297,5 @@ def ask_guardian(model: Model, tools: list, question: str) -> AskResult:
         result = agent(question)
     except Exception as exc:  # noqa: BLE001 - surface, don't crash the request
         return AskResult(answer="", error=f"{type(exc).__name__}: {exc}")
-    called = [
-        block["toolUse"]["name"]
-        for message in agent.messages
-        for block in message.get("content", [])
-        if "toolUse" in block
-    ]
-    return AskResult(answer=str(result).strip(), tools_called=called)
+    trace = build_trace(agent.messages)
+    return AskResult(answer=str(result).strip(), tools_called=[step.tool for step in trace], trace=trace)

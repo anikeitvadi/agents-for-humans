@@ -7,15 +7,16 @@ without changing any of this logic.
 import json
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from strands.models import Model
 
-from agent.config import BEDROCK_MODEL_ID
+from agent.config import BEDROCK_MODEL_ID, RULE_VERSION
 from agent.engine.decision_gate import GateInputs, evaluate_gate
 from agent.engine.store import Store
-from agent.llm.document_client import build_extraction_client
+from agent.llm.document_client import FailoverExtractionClient, build_extraction_client
 from agent.llm.draft import build_bedrock_agent
 from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names
 from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll
@@ -25,6 +26,9 @@ from agent.packs.recalls.pipeline import run_recall_check
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RECALLS_FIXTURES_DIR = REPO_ROOT / "fixtures" / "recalls"
+
+
+APPROVE_ACTION = "approve_for_attorney_review"
 
 
 def _load_receipts() -> dict:
@@ -43,6 +47,12 @@ class AskRequest(BaseModel):
     question: str  # free text for the guardian agent (agent/llm/guardian.py)
 
 
+class ApproveDraftRequest(BaseModel):
+    clock_id: str
+    event_id: str
+    rule_version: str
+
+
 _PRIOR_BULLETIN_MONTH = PRIOR_CAPTURED_MONTH
 
 
@@ -51,6 +61,7 @@ def create_app(
     attempt_live_recall_feed: bool = False,
     guardian_model: Model | None = None,
     auto_guardian_model: bool = True,
+    extraction_client=None,
 ) -> FastAPI:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     store = Store(db_path)
@@ -62,7 +73,14 @@ def create_app(
     # deterministic recorded replay of the same specimen images (C1) — the
     # mode is surfaced in every response below so the UI never presents a
     # recorded replay as a live parse.
-    extraction_client, extraction_mode = build_extraction_client()
+    if extraction_client is None:
+        extraction_client, extraction_mode = build_extraction_client()
+    else:
+        # Tests inject a "live" client that behaves like a denied account;
+        # wrap it so the same failover path is exercised.
+        if not isinstance(extraction_client, FailoverExtractionClient):
+            extraction_client = FailoverExtractionClient(extraction_client)
+        extraction_mode = extraction_client.mode
     # attempt_live_recall_feed defaults to False so create_app() (used
     # throughout the test suite) never makes a real network call — the
     # actual running app (bottom of this file) turns it on. Either way the
@@ -88,11 +106,33 @@ def create_app(
         guardian_model = build_guardian_model(BEDROCK_MODEL_ID)
     app = FastAPI(title="Immigration Status Guardian — demo backend")
 
+    def draft_payload(draft, clock_id: str, event_id: str, rule_version: str, kind: str) -> dict | None:
+        """Every draft carries the ledger key it belongs to (so the UI can
+        act on it) and whether a human already approved it."""
+        if draft is None:
+            return None
+        receipt = store.get_action(clock_id, event_id, rule_version, APPROVE_ACTION)
+        return {
+            "subject": draft.subject,
+            "body": draft.body,
+            "used_llm_personalization": bool(draft.used_llm_personalization),
+            "kind": kind,
+            "ref": {"clock_id": clock_id, "event_id": event_id, "rule_version": rule_version},
+            "approved_at": receipt.created_at if receipt else None,
+        }
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception):
+        # Never a bare 500 with a text body: the UI's fetch helper shows
+        # this message instead of failing silently.
+        return JSONResponse(status_code=500, content={"error": f"{type(exc).__name__}: {exc}"})
+
     @app.get("/api/sample-case")
     def sample_case():
         extraction = extract_sample_case_fields(extraction_client, mode=extraction_mode, model_id=BEDROCK_MODEL_ID)
         return {
             "mode": extraction.mode,
+            "mode_reason": extraction.mode_reason,
             "fields": extraction.fields,
             "evidence": extraction.evidence,
             "statuses": extraction.statuses,
@@ -112,9 +152,10 @@ def create_app(
         )
         return {
             "mode": result.extraction.mode,
+            "mode_reason": result.extraction.mode_reason,
             "error": result.error,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
-            "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+            "draft": draft_payload(result.draft, "demo-clock", "demo-event", RULE_VERSION, "attorney_review"),
         }
 
     @app.get("/api/gate-demo")
@@ -160,7 +201,9 @@ def create_app(
             "error": result.error,
             "cutoff_status": result.cutoff.status if result.cutoff else None,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
-            "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+            "draft": draft_payload(
+                result.draft, "bulletin-clock", f"bulletin-{req.month}-{case.category}", RULE_VERSION, "attorney_review"
+            ),
         }
 
     @app.post("/api/recalls/check")
@@ -174,7 +217,41 @@ def create_app(
             "message": result.match.message,
             "demo_scope": result.match.demo_scope,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason},
-            "draft": {"subject": result.draft.subject, "body": result.draft.body} if result.draft else None,
+            "draft": draft_payload(
+                result.draft,
+                "recall-clock",
+                f"recall-{recall_item.recall_id}-{receipt.get('receipt_id', 'unknown')}",
+                RULE_VERSION,
+                "recall_remedy",
+            ),
+        }
+
+    @app.post("/api/reset")
+    def reset_demo():
+        """Demo control: clear the ledger so the sample case surfaces again."""
+        store.reset()
+        return {"reset": True}
+
+    @app.post("/api/drafts/approve")
+    def approve_draft(req: ApproveDraftRequest):
+        """The one human action in the loop: approve a persisted draft for
+        attorney review. Records an idempotent receipt; sends nothing (there
+        is no mail transport in this build, and the UI never claims one)."""
+        draft = store.get_draft(req.clock_id, req.event_id, req.rule_version)
+        if draft is None or draft.status != "ready":
+            return JSONResponse(status_code=404, content={"error": "No ready draft exists for that clock/event/rule version."})
+        receipt = store.record_action(req.clock_id, req.event_id, req.rule_version, APPROVE_ACTION)
+        return {
+            "approved": True,
+            "already_approved": receipt.already_recorded,
+            "state": "Approved and ready to send",
+            "receipt": {
+                "clock_id": receipt.clock_id,
+                "event_id": receipt.event_id,
+                "rule_version": receipt.rule_version,
+                "action_type": receipt.action_type,
+                "created_at": receipt.created_at,
+            },
         }
 
     @app.post("/api/ask")
@@ -187,14 +264,17 @@ def create_app(
                 "available": False,
                 "answer": None,
                 "tools_called": [],
+                "trace": [],
                 "tools": names,
                 "error": "The guardian agent needs a Bedrock model: configure AWS credentials with model access.",
             }
         result = ask_guardian(guardian_model, guardian_tools, req.question)
         return {
             "available": True,
+            "question": req.question,
             "answer": result.answer,
             "tools_called": result.tools_called,
+            "trace": result.trace_dicts(),
             "tools": names,
             "error": result.error,
         }
