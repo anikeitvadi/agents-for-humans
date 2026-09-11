@@ -63,5 +63,11 @@ def test_prompt_payload_reports_missing_model_offline(monkeypatch, tmp_path):
 
     assert out["path"] == "agent"
     assert out["answer"] is None
-    assert out["tools"] == ["check_document_dates", "run_sample_case_check", "check_visa_bulletin", "check_recall"]
+    assert out["tools"] == [
+        "check_document_dates",
+        "run_sample_case_check",
+        "check_uploaded_case",
+        "check_visa_bulletin",
+        "check_recall",
+    ]
     assert "model" in out["error"]

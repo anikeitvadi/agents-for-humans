@@ -8,7 +8,7 @@ is a plain "refund or voucher?" ping, not a drafted email).
 
 from dataclasses import dataclass
 
-from agent.engine.engine import RuleOutcome, process_event
+from agent.engine.engine import RuleOutcome, ensure_draft, process_event
 from agent.engine.schema import Alert, Clock, Event
 from agent.engine.store import Store
 from agent.llm.draft import DraftResult
@@ -38,25 +38,14 @@ def run_recall_check(store: Store, clock_id: str, recall_item: RecallItem, recei
 
     alert = process_event(store, clock, event, outcome)
 
-    draft = None
-    if alert.decision == "surfaced":
-        draft = DraftResult(subject=f"Recall remedy available: {recall_item.product_name}", body=match.message, used_llm_personalization=False)
-        store.save_draft(
-            clock_id=clock.clock_id,
-            event_id=event.event_id,
-            rule_version=event.rule_version,
-            status="ready",
-            subject=draft.subject,
-            body=draft.body,
-            used_llm_personalization=False,
-        )
-    else:
-        existing = store.get_draft(clock_id=clock.clock_id, event_id=event.event_id, rule_version=event.rule_version)
-        if existing is not None and existing.status == "ready":
-            draft = DraftResult(
-                subject=existing.subject,
-                body=existing.body,
-                used_llm_personalization=bool(existing.used_llm_personalization),
-            )
+    draft = ensure_draft(
+        store,
+        clock,
+        event,
+        should_have_draft=match.matched,
+        build_draft=lambda: DraftResult(
+            subject=f"Recall remedy available: {recall_item.product_name}", body=match.message, used_llm_personalization=False
+        ),
+    )
 
     return RecallCheckResult(alert=alert, draft=draft, match=match)

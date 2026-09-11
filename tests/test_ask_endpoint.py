@@ -3,9 +3,18 @@
 from fastapi.testclient import TestClient
 
 from agent.app import create_app
+from agent.packs.immigration.pipeline import SPECIMENS_DIR
 from tests.scripted_model import ScriptedModel
 
-TOOLS = ["check_document_dates", "run_sample_case_check", "check_visa_bulletin", "check_recall"]
+TOOLS = ["check_document_dates", "run_sample_case_check", "check_uploaded_case", "check_visa_bulletin", "check_recall"]
+
+
+def _specimen_upload_files():
+    return {
+        "i94": ("i94.png", (SPECIMENS_DIR / "i94.png").read_bytes(), "image/png"),
+        "i797": ("i797.png", (SPECIMENS_DIR / "i797.png").read_bytes(), "image/png"),
+        "passport": ("passport.png", (SPECIMENS_DIR / "passport.png").read_bytes(), "image/png"),
+    }
 
 
 def test_ask_reports_unavailable_without_a_model(tmp_path):
@@ -20,7 +29,18 @@ def test_ask_reports_unavailable_without_a_model(tmp_path):
 
 
 def test_ask_runs_the_agent_with_an_injected_model(tmp_path):
-    model = ScriptedModel([("tool", "run_sample_case_check", {}), ("text", "One thing needs your review; a draft is ready.")])
+    # One model, two conversations worth of scripted steps: the agent loop
+    # calls stream() once for the tool-use decision and once more for the
+    # follow-up text per question, and /api/ask builds a fresh Agent per
+    # call but shares this same model instance across both questions below.
+    model = ScriptedModel(
+        [
+            ("tool", "run_sample_case_check", {}),
+            ("text", "One thing needs your review; a draft is ready."),
+            ("tool", "run_sample_case_check", {}),
+            ("text", "Nothing new."),
+        ]
+    )
     client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), guardian_model=model))
 
     body = client.post("/api/ask", json={"question": "Check the sample case."}).json()
@@ -35,13 +55,42 @@ def test_ask_runs_the_agent_with_an_injected_model(tmp_path):
     assert body["trace"][0]["mode"] == "recorded"
     assert body["trace"][0]["persisted_draft"] is True
 
-    # The agent's tool wrote to the same ledger the UI reads: the sample case
-    # is now already flagged, so the UI path stays silent and keeps the draft.
-    again = client.post("/api/process-sample-case").json()
-    assert again["alert"]["decision"] == "silent"
-    assert again["draft"] is not None
+    # The agent's tool wrote to the same ledger the UI reads: asking again
+    # (same running app/store/client) stays silent but keeps the draft —
+    # /api/process-sample-case no longer exists, so this is exercised
+    # through the same tool the first question used.
+    again = client.post("/api/ask", json={"question": "Check it again."}).json()
+    assert again["trace"][0]["decision"] == "silent"
+    assert again["trace"][0]["persisted_draft"] is True
 
 
 def test_ask_rejects_missing_question(tmp_path):
     client = TestClient(create_app(db_path=str(tmp_path / "demo.db")))
     assert client.post("/api/ask", json={}).status_code == 422
+
+
+def test_ask_binds_check_uploaded_case_to_the_supplied_submission_ref(tmp_path):
+    client = TestClient(create_app(db_path=str(tmp_path / "demo.db")))
+    processed = client.post("/api/process-documents", files=_specimen_upload_files()).json()
+
+    model = ScriptedModel([("tool", "check_uploaded_case", {}), ("text", "Your uploaded case needs review.")])
+    app_with_model = create_app(db_path=str(tmp_path / "demo.db"), guardian_model=model)
+    client_with_model = TestClient(app_with_model)
+
+    body = client_with_model.post(
+        "/api/ask", json={"question": "What about the case I just uploaded?", "submission_ref": processed["ref"]}
+    ).json()
+
+    assert body["tools_called"] == ["check_uploaded_case"]
+    assert body["trace"][0]["decision"] == "surfaced"
+    assert body["trace"][0]["mode"] == "recorded"
+
+
+def test_ask_without_a_submission_ref_reports_no_uploaded_case_available(tmp_path):
+    model = ScriptedModel([("tool", "check_uploaded_case", {}), ("text", "No uploaded case yet.")])
+    client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), guardian_model=model))
+
+    body = client.post("/api/ask", json={"question": "What about my uploaded case?"}).json()
+
+    assert body["trace"][0]["status"] == "error"
+    assert "No uploaded case is available" in body["trace"][0]["summary"]

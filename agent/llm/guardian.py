@@ -25,7 +25,7 @@ from strands.models import Model
 
 from agent.engine.store import Store
 from agent.packs.immigration.bulletin import BulletinLoadError, load_seeded_case, run_bulletin_poll
-from agent.packs.immigration.pipeline import run_sample_case
+from agent.packs.immigration.pipeline import get_persisted_result, run_sample_case
 from agent.packs.immigration.rules import check_i94_i797_discrepancy
 from agent.packs.recalls.feed import RecallItem
 from agent.packs.recalls.pipeline import run_recall_check
@@ -43,7 +43,9 @@ SYSTEM_PROMPT = (
     "attention and give the reason from the tool.\n"
     "4. Mention the extraction or feed mode (recorded, live, fallback) when a tool reports one.\n"
     "5. Answer in a few plain sentences. If the tools cannot answer the question, say so and "
-    "list what they can check."
+    "list what they can check.\n"
+    "6. If asked about the documents the person just uploaded, use check_uploaded_case, never "
+    "run_sample_case_check — that tool is the separate bundled demo sample, not their case."
 )
 
 
@@ -78,9 +80,17 @@ def build_guardian_tools(
     receipts_loader: Callable[[], dict],
     prior_bulletin_months: dict[str, str],
     draft_agent: Agent | None = None,
+    current_submission_ref: dict[str, str] | None = None,
 ) -> list:
     """Wrap the engine's checks as Strands tools bound to this app's store,
-    clients, and fixtures. Returned tools also work as plain functions."""
+    clients, and fixtures. Returned tools also work as plain functions.
+
+    `current_submission_ref` is the {clock_id, event_id, rule_version} of a
+    specific document upload the caller wants the agent able to discuss —
+    typically supplied per-request from the UI's last /api/process-documents
+    response, not held as server-side "last upload" state. Without it,
+    check_uploaded_case reports unavailable rather than silently falling
+    back to the bundled sample."""
 
     @tool
     def check_document_dates(i94_admit_until: str, i797_valid_until: str) -> dict:
@@ -101,7 +111,6 @@ def build_guardian_tools(
         result = run_sample_case(
             store,
             clock_id="demo-clock",
-            event_id="demo-event",
             client=extraction_client,
             mode=extraction_mode,
             model_id=model_id,
@@ -118,6 +127,32 @@ def build_guardian_tools(
                 "decision": result.alert.decision if result.alert else None,
                 "reason": result.alert.reason if result.alert else None,
                 "draft": result.draft,
+            }
+        )
+
+    @tool
+    def check_uploaded_case() -> dict:
+        """Report the discrepancy check result for the specific documents the person just uploaded and processed through the upload flow — never the bundled demo sample. Requires that this question was asked with a submission reference from a completed upload; otherwise reports that no uploaded case is available."""
+        if current_submission_ref is None:
+            return _err("No uploaded case is available for this question. Process documents through the upload flow first, then ask again.")
+        persisted = get_persisted_result(store, current_submission_ref)
+        if persisted is None:
+            return _err("The referenced submission was not found — it may have been cleared by a reset. Process documents again.")
+        alert = store.get_alert(**current_submission_ref)
+        draft = store.get_draft(**current_submission_ref)
+        return _ok(
+            {
+                "extraction_mode": persisted.mode,
+                "mode_reason": persisted.mode_reason,
+                "fields": persisted.fields,
+                "needs_review": persisted.needs_review,
+                "decision": alert.decision if alert else None,
+                "reason": alert.reason if alert else None,
+                "draft": (
+                    {"subject": draft.subject, "body": draft.body, "used_llm_personalization": bool(draft.used_llm_personalization)}
+                    if draft is not None and draft.status == "ready"
+                    else None
+                ),
             }
         )
 
@@ -176,7 +211,7 @@ def build_guardian_tools(
             }
         )
 
-    return [check_document_dates, run_sample_case_check, check_visa_bulletin, check_recall]
+    return [check_document_dates, run_sample_case_check, check_uploaded_case, check_visa_bulletin, check_recall]
 
 
 def tool_names(tools: list) -> list[str]:

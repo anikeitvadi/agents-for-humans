@@ -10,10 +10,13 @@ live parse (see docs/implementation-handoff-2026-09-10.md C1).
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Literal
 
 import boto3
+
+_REFERENCE_ID_PATTERN = re.compile(r"reference id: '([^']*)'")
 
 RECORDED_RESPONSES_PATH = (
     Path(__file__).resolve().parent.parent.parent / "fixtures" / "sample_case" / "recorded_extraction_response.json"
@@ -53,11 +56,18 @@ class RecordedResponseClient:
 
 
 def _document_name_from_request(kwargs: dict) -> str:
+    # Image blocks (PNG/JPEG/etc — R1) carry no `name` field, so the
+    # document's reference id is embedded in the prompt text instead; this
+    # is a recorded-client identification concern only, not part of the
+    # real AWS request contract.
     for message in kwargs.get("messages", []):
         for block in message.get("content", []):
-            if "document" in block:
-                return block["document"]["name"]
-    raise ValueError("Converse request did not include a document block")
+            text = block.get("text")
+            if text:
+                match = _REFERENCE_ID_PATTERN.search(text)
+                if match:
+                    return match.group(1)
+    raise ValueError("Converse request did not include a document reference id")
 
 
 def _describe_failure(exc: Exception) -> str:
@@ -78,7 +88,11 @@ class FailoverExtractionClient:
     call: read `mode` and `fallback_reason` after extraction, never before.
 
     A batch that fails over part-way is labeled "recorded", never "live":
-    the label errs toward the less impressive claim.
+    the label errs toward the less impressive claim. Callers that make
+    multiple calls per case (agent/packs/immigration/pipeline.py) must
+    additionally check whether `mode` *changed* between calls — a client
+    that starts live and fails over mid-batch has already mixed a genuine
+    live result with recorded ones, which no single final label can fix.
     """
 
     def __init__(self, live_client=None, recorded_client: RecordedResponseClient | None = None):

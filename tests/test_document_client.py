@@ -12,8 +12,8 @@ def _i94_request_kwargs(document_name="i94"):
             {
                 "role": "user",
                 "content": [
-                    {"text": "extract admit_until"},
-                    {"document": {"format": "png", "name": document_name, "source": {"bytes": b"fake"}}},
+                    {"text": f"extract admit_until (reference id: '{document_name}')"},
+                    {"image": {"format": "png", "source": {"bytes": b"fake"}}},
                 ],
             }
         ]
@@ -34,6 +34,13 @@ def test_recorded_response_client_raises_for_unknown_document():
 
     with pytest.raises(KeyError):
         client.converse(**_i94_request_kwargs("not-a-real-document"))
+
+
+def test_recorded_response_client_raises_when_request_has_no_reference_id():
+    client = RecordedResponseClient()
+
+    with pytest.raises(ValueError):
+        client.converse(messages=[{"role": "user", "content": [{"text": "no reference id here"}]}])
 
 
 def test_extract_fields_parses_i94_specimen_response_via_recorded_client():

@@ -25,38 +25,6 @@
   }
   * { box-sizing: border-box; }
   .hidden { display: none !important; }
-  .error-banner { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 0; padding: 10px 14px; border-radius: 6px;
-    border: 1px solid var(--review); background: var(--review-wash); color: var(--ink); font-size: 13.5px; }
-  .error-banner-text { flex: 1; white-space: pre-wrap; word-break: break-word; }
-  .error-banner button { font: 500 12.5px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
-    border-radius: 6px; padding: 3px 9px; cursor: pointer; }
-  .mode-note { font-size: 12px; color: var(--ink-3); margin: 6px 0 10px; max-width: 40ch; }
-  .ask { margin: 26px 0 6px; }
-  .ask-form { display: flex; gap: 8px; }
-  .ask-input { flex: 1; min-width: 0; font: 14px var(--sans); padding: 9px 12px; border-radius: 6px; border: 1px solid var(--rule);
-    background: rgba(231, 237, 243, 0.04); color: var(--ink); }
-  .ask-input::placeholder { color: var(--ink-3); }
-  .ask-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .ask-suggestion { font: 12.5px var(--sans); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rule);
-    background: none; color: var(--ink-2); cursor: pointer; }
-  .ask-suggestion:hover { color: var(--ink); border-color: var(--ink-3); }
-  .ask-answer { margin-top: 14px; padding: 12px 14px; border-left: 2px solid var(--accent); }
-  .ask-answer.error { border-left-color: var(--review); }
-  .ask-answer-text { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-  .ask-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .ask-tool { font: 11.5px var(--mono); padding: 2px 8px; border-radius: 4px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
-  .trace { margin-top: 12px; }
-  .trace-heading { font-size: 12px; color: var(--ink-3); margin: 0 0 4px; }
-  .trace-step { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 5px 0; border-top: 1px solid var(--rule); font-size: 12.5px; }
-  .trace-step:first-of-type { border-top: none; }
-  .trace-num { color: var(--ink-3); font-family: var(--mono); }
-  .trace-line { color: var(--ink-2); }
-  .trace-line .tool { font-family: var(--mono); color: var(--ink); }
-  .trace-line .pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 6px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
-  .trace-line .pill.surfaced { background: var(--review-wash); color: var(--review); }
-  .trace-line .pill.silent { background: var(--accent-wash); color: var(--accent); }
-  .trace-line .pill.error { background: var(--review-wash); color: var(--review); }
-  .trace-summary { display: block; color: var(--ink-3); margin-top: 2px; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 72px; }
@@ -67,16 +35,59 @@
   .top-identity { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .product-name { font-size: 15px; font-weight: 600; }
   .top-meta { font-size: 13px; color: var(--ink-3); }
-  .tabs { display: flex; gap: 22px; }
-  .tab { font: 500 14px var(--sans); background: none; border: none; border-bottom: 2px solid transparent;
-    color: var(--ink-3); padding: 6px 0; cursor: pointer; }
-  .tab.active { color: var(--ink); font-weight: 600; border-color: var(--accent); }
+
+  .error-banner { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 0; padding: 10px 14px; border-radius: 6px;
+    border: 1px solid var(--review); background: var(--review-wash); color: var(--ink); font-size: 13.5px; }
+  .error-banner-text { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .error-banner button { font: 500 12.5px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
+    border-radius: 6px; padding: 3px 9px; cursor: pointer; }
 
   .legal-note { font-size: 12.5px; color: var(--ink-3); border-left: 2px solid var(--review); padding: 2px 0 2px 10px;
-    margin: 16px 0 24px; max-width: 62ch; }
+    margin: 16px 0 28px; max-width: 62ch; }
+
+  .step { margin-bottom: 40px; }
+  .step-heading { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; }
+  .step-number { font-family: var(--mono); font-size: 12.5px; color: var(--accent); background: var(--accent-wash);
+    border-radius: 999px; padding: 2px 9px; }
+  .step-title { font-size: 17px; font-weight: 600; margin: 0; }
+  .step-desc { color: var(--ink-2); font-size: 14px; max-width: 62ch; margin: 0 0 18px; }
+
+  /* Upload */
+  .upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 760px) { .upload-grid { grid-template-columns: 1fr; } }
+  .upload-card { background: var(--surface); border-radius: 8px; padding: 14px 16px; border: 1px solid var(--rule); }
+  .upload-card-title { font-size: 13.5px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+  .upload-card-title svg { width: 15px; height: 15px; color: var(--ink-3); }
+  .upload-links { display: flex; gap: 12px; font-size: 12.5px; margin-bottom: 10px; }
+  .upload-links a, .upload-links button.btn-link-sm { font-size: 12.5px; color: var(--ink-2); text-decoration: underline;
+    text-underline-offset: 2px; text-decoration-color: var(--rule); background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; }
+  .upload-links a:hover, .upload-links button.btn-link-sm:hover { color: var(--ink); }
+  .upload-links button.btn-link-sm:disabled { opacity: 0.45; cursor: not-allowed; }
+  input[type="file"] { display: block; width: 100%; font-size: 12.5px; color: var(--ink-2); }
+  input[type="file"]::file-selector-button { font: 500 12.5px var(--sans); padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--rule); background: var(--surface-raised); color: var(--ink-2); cursor: pointer; margin-right: 8px; }
+  input[type="file"]:disabled { opacity: 0.45; }
+  .upload-preview { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); }
+  .upload-preview img { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; border: 1px solid var(--rule); }
+
+  .process-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .btn-primary { font: 600 14px var(--sans); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent);
+    background: var(--accent); color: #0A1310; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-quiet { font: 500 13px var(--sans); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule);
+    background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .btn-quiet:hover { color: var(--ink); border-color: var(--ink-3); }
+  .btn-quiet:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-link { font: 500 13.5px var(--sans); background: none; border: none; color: var(--ink-2); cursor: pointer;
+    padding: 0; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+  .btn-link:hover { color: var(--ink); }
+  .process-status { font-size: 13px; color: var(--ink-3); }
+  .spinner { display: inline-block; width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--rule);
+    border-top-color: var(--accent); animation: spin 0.7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .upload-note { font-size: 12.5px; color: var(--ink-3); max-width: 62ch; margin: 10px 0 0; }
 
   /* Review hero */
-  .review { margin-bottom: 34px; }
   .review-empty { color: var(--ink-2); max-width: 56ch; font-size: 14.5px; }
   .review-empty strong { color: var(--ink); font-weight: 600; }
 
@@ -87,7 +98,7 @@
   .status-chip.tone-quiet { background: var(--accent-wash); color: var(--accent); }
   .status-chip.tone-routine { background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
 
-  .review-headline { font-size: 25px; font-weight: 700; line-height: 1.3; margin: 0 0 20px; max-width: 30ch; }
+  .review-headline { font-size: 23px; font-weight: 700; line-height: 1.3; margin: 0 0 20px; max-width: 32ch; }
 
   .comparison { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
   .comparison-doc { flex: 0 0 auto; min-width: 0; padding: 12px 16px; border-radius: 8px; background: var(--surface);
@@ -96,18 +107,12 @@
   .comparison-label { display: block; font-size: 12.5px; color: var(--ink-3); margin-bottom: 4px; }
   .comparison-date { display: block; font-family: var(--mono); font-size: 16px; font-weight: 500; border-radius: 4px;
     padding: 1px 2px; margin: -1px -2px; }
-  .comparison-connector { flex: 1; position: relative; height: 1px; background: var(--rule); transform: scaleX(0); transform-origin: left; }
+  .comparison-connector { flex: 1; position: relative; height: 1px; background: var(--rule); }
   .comparison-gap { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--surface-raised);
-    color: var(--review); padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; }
+    color: var(--review); padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 
   .review-note { color: var(--ink-2); font-size: 14px; max-width: 56ch; margin: 0 0 18px; }
-
   .review-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .btn-primary { font: 600 14px var(--sans); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent);
-    background: var(--accent); color: #0A1310; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
-  .btn-link { font: 500 13.5px var(--sans); background: none; border: none; color: var(--ink-2); cursor: pointer;
-    padding: 0; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
-  .btn-link:hover { color: var(--ink); }
 
   /* Workspace: main + support columns */
   .workspace { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-bottom: 34px; }
@@ -143,16 +148,40 @@
   .activity-detail summary { font-size: 12px; color: var(--ink-3); cursor: pointer; }
   .activity-detail-body { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 
-  /* Demo controls */
-  details.demo-controls { border-top: 1px solid var(--rule); padding-top: 14px; }
-  details.demo-controls summary { font-size: 13px; color: var(--ink-3); cursor: pointer; user-select: none; }
-  details.demo-controls summary:hover { color: var(--ink-2); }
-  .demo-note { font-size: 12.5px; color: var(--ink-3); max-width: 60ch; margin: 12px 0; }
-  .demo-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .btn-quiet { font: 500 13px var(--sans); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule);
-    background: var(--surface); color: var(--ink-2); cursor: pointer; }
-  .btn-quiet:hover { color: var(--ink); border-color: var(--ink-3); }
+  /* Ask the guardian */
+  .ask { margin: 26px 0 6px; }
+  .ask-form { display: flex; gap: 8px; }
+  .ask-input { flex: 1; min-width: 0; font: 14px var(--sans); padding: 9px 12px; border-radius: 6px; border: 1px solid var(--rule);
+    background: rgba(231, 237, 243, 0.04); color: var(--ink); }
+  .ask-input::placeholder { color: var(--ink-3); }
+  .ask-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ask-suggestion { font: 12.5px var(--sans); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rule);
+    background: none; color: var(--ink-2); cursor: pointer; }
+  .ask-suggestion:hover { color: var(--ink); border-color: var(--ink-3); }
+  .ask-answer { margin-top: 14px; padding: 12px 14px; border-left: 2px solid var(--accent); }
+  .ask-answer.error { border-left-color: var(--review); }
+  .ask-answer-text { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+  .ask-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ask-tool { font: 11.5px var(--mono); padding: 2px 8px; border-radius: 4px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .trace { margin-top: 12px; }
+  .trace-heading { font-size: 12px; color: var(--ink-3); margin: 0 0 4px; }
+  .trace-step { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 5px 0; border-top: 1px solid var(--rule); font-size: 12.5px; }
+  .trace-step:first-of-type { border-top: none; }
+  .trace-num { color: var(--ink-3); font-family: var(--mono); }
+  .trace-line { color: var(--ink-2); }
+  .trace-line .tool { font-family: var(--mono); color: var(--ink); }
+  .trace-line .pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 6px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .trace-line .pill.surfaced { background: var(--review-wash); color: var(--review); }
+  .trace-line .pill.silent { background: var(--accent-wash); color: var(--accent); }
+  .trace-line .pill.error { background: var(--review-wash); color: var(--review); }
+  .trace-summary { display: block; color: var(--ink-3); margin-top: 2px; }
 
+  /* Bulletin replay + technical extras */
+  .demo-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+
+  details.extras { border-top: 1px solid var(--rule); padding-top: 14px; margin-top: 8px; }
+  details.extras summary { font-size: 13px; color: var(--ink-3); cursor: pointer; user-select: none; }
+  details.extras summary:hover { color: var(--ink-2); }
   .gate-illustration { margin-top: 14px; }
   .gate-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px;
     border-bottom: 1px solid var(--rule); }
@@ -185,12 +214,9 @@
   <header class="top">
     <div class="top-identity">
       <span class="product-name">Immigration Status Guardian</span>
-      <span class="top-meta" id="top-meta">Sample case</span>
+      <span class="top-meta" id="top-meta">Upload your documents to begin</span>
     </div>
-    <nav class="tabs" role="tablist">
-      <button class="tab active" id="tab-case" role="tab" aria-selected="true">Case review</button>
-      <button class="tab" id="tab-recall" role="tab" aria-selected="false">Recall demo</button>
-    </nav>
+    <button class="btn-link" id="reset-btn" type="button">Reset demo</button>
   </header>
 
   <div class="error-banner hidden" id="error-banner" role="alert">
@@ -198,46 +224,86 @@
     <button type="button" id="error-dismiss">Dismiss</button>
   </div>
 
-  <p class="legal-note" id="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
+  <p class="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
 
-  <main id="panel-case" class="panel">
-    <section class="review" id="review">
-      <div class="review-empty" id="review-empty">
-        <p>Expand <strong>Demo controls</strong> below and load the sample case to see how a document-date discrepancy gets flagged for attorney review.</p>
-      </div>
-      <div class="review-loaded hidden" id="review-loaded">
-        <div class="status-chip" id="review-status"></div>
-        <h1 class="review-headline" id="review-headline"></h1>
-        <div class="comparison" id="comparison">
-          <div class="comparison-doc" id="comparison-doc-i94" tabindex="0" role="button">
-            <span class="comparison-label">I-94 admit-until date</span>
-            <span class="comparison-date" id="date-admit_until"></span>
-          </div>
-          <div class="comparison-connector" id="comparison-connector">
-            <span class="comparison-gap" id="comparison-gap"></span>
-          </div>
-          <div class="comparison-doc" id="comparison-doc-i797" tabindex="0" role="button">
-            <span class="comparison-label">I-797 valid-until date</span>
-            <span class="comparison-date" id="date-i797_valid_until"></span>
-          </div>
-        </div>
-        <p class="review-note" id="review-note"></p>
-        <div class="review-actions">
-          <button class="btn-primary" id="open-draft-btn"></button>
-          <button class="btn-link" id="view-docs-btn">View source documents</button>
-        </div>
-      </div>
-    </section>
+  <section class="step" id="upload-step">
+    <div class="step-heading"><span class="step-number">1</span><h2 class="step-title">Upload your documents</h2></div>
+    <p class="step-desc">Download the synthetic sample I-94, I-797, and passport below (or use the shortcut), then select them here. Your selected files are sent to the real extraction pipeline — nothing here is a canned replay of an upload that didn't happen.</p>
 
-    <div class="workspace">
+    <div class="upload-grid">
+      <div class="upload-card">
+        <div class="upload-card-title" id="upload-title-i94">Form I-94</div>
+        <div class="upload-links">
+          <a href="/api/sample-documents/i94" download="sample-i94.png">Download sample</a>
+          <button type="button" class="btn-link-sm" id="use-sample-i94">Use downloaded sample</button>
+        </div>
+        <input type="file" id="upload-i94" accept="image/png">
+        <div class="upload-preview hidden" id="preview-i94"></div>
+      </div>
+      <div class="upload-card">
+        <div class="upload-card-title" id="upload-title-i797">Form I-797</div>
+        <div class="upload-links">
+          <a href="/api/sample-documents/i797" download="sample-i797.png">Download sample</a>
+          <button type="button" class="btn-link-sm" id="use-sample-i797">Use downloaded sample</button>
+        </div>
+        <input type="file" id="upload-i797" accept="image/png">
+        <div class="upload-preview hidden" id="preview-i797"></div>
+      </div>
+      <div class="upload-card">
+        <div class="upload-card-title" id="upload-title-passport">Passport</div>
+        <div class="upload-links">
+          <a href="/api/sample-documents/passport" download="sample-passport.png">Download sample</a>
+          <button type="button" class="btn-link-sm" id="use-sample-passport">Use downloaded sample</button>
+        </div>
+        <input type="file" id="upload-passport" accept="image/png">
+        <div class="upload-preview hidden" id="preview-passport"></div>
+      </div>
+    </div>
+
+    <div class="process-row">
+      <button class="btn-primary" id="process-btn" disabled>Process documents</button>
+      <button class="btn-quiet" id="load-bundled-btn" type="button">Load bundled sample &amp; process</button>
+      <span class="process-status" id="process-status"></span>
+    </div>
+    <p class="upload-note" id="mode-note"></p>
+  </section>
+
+  <section class="step" id="review-step">
+    <div class="step-heading"><span class="step-number">2</span><h2 class="step-title">Review the discrepancy</h2></div>
+    <div class="review-empty" id="review-empty">
+      <p>Once your documents are processed, any disagreement between the I-94 admit-until date and the I-797 validity end date will show here, with the source evidence and a draft for your attorney.</p>
+    </div>
+    <div class="review-loaded hidden" id="review-loaded">
+      <div class="status-chip" id="review-status"></div>
+      <h1 class="review-headline" id="review-headline"></h1>
+      <div class="comparison" id="comparison">
+        <div class="comparison-doc" id="comparison-doc-i94" tabindex="0" role="button" aria-label="Highlight the I-94 admit-until date">
+          <span class="comparison-label">I-94 admit-until date</span>
+          <span class="comparison-date" id="date-admit_until"></span>
+        </div>
+        <div class="comparison-connector" id="comparison-connector">
+          <span class="comparison-gap" id="comparison-gap"></span>
+        </div>
+        <div class="comparison-doc" id="comparison-doc-i797" tabindex="0" role="button" aria-label="Highlight the I-797 valid-until date">
+          <span class="comparison-label">I-797 valid-until date</span>
+          <span class="comparison-date" id="date-i797_valid_until"></span>
+        </div>
+      </div>
+      <p class="review-note" id="review-note"></p>
+      <div class="review-actions">
+        <button class="btn-primary" id="open-draft-btn"></button>
+        <button class="btn-link" id="view-docs-btn">View source documents</button>
+      </div>
+    </div>
+
+    <div class="workspace" style="margin-top: 28px">
       <section>
         <h2 class="section-heading">Recent monitoring activity</h2>
-        <div class="activity-empty" id="activity-empty">No activity yet — load the sample case or replay a bulletin update below.</div>
+        <div class="activity-empty" id="activity-empty">No activity yet — process your documents above, or replay a bulletin update below.</div>
         <div id="activity-list"></div>
       </section>
       <aside>
-        <h2 class="section-heading">Documents</h2>
-        <p class="mode-note hidden" id="mode-note"></p>
+        <h2 class="section-heading">Extracted evidence</h2>
         <div class="doc-list" id="doc-list"></div>
       </aside>
     </div>
@@ -246,7 +312,7 @@
       <h2 class="section-heading">Ask the guardian</h2>
       <p class="review-note">A Strands agent whose only tools are the checks on this page. It runs a check and reports the result. It never determines status or gives advice.</p>
       <form class="ask-form" id="ask-form">
-        <input class="ask-input" id="ask-input" type="text" autocomplete="off" aria-label="Question for the guardian" placeholder="Ask about the sample case, a bulletin month, or a recall">
+        <input class="ask-input" id="ask-input" type="text" autocomplete="off" aria-label="Question for the guardian" placeholder="Ask about your uploaded case or a bulletin month">
         <button class="btn-primary" id="ask-btn" type="submit">Ask</button>
       </form>
       <div class="ask-suggestions" id="ask-suggestions"></div>
@@ -256,57 +322,31 @@
         <div class="trace hidden" id="ask-trace"></div>
       </div>
     </section>
+  </section>
 
-    <details class="demo-controls">
-      <summary>Demo controls</summary>
-      <p class="demo-note">These buttons simulate what would otherwise happen automatically — a user uploading documents, or a scheduled check of the government's visa bulletin — so the demo doesn't need a real upload or a real publication date.</p>
+  <section class="step" id="bulletin-step">
+    <div class="step-heading"><span class="step-number">3</span><h2 class="step-title">Watch for a visa bulletin update</h2></div>
+    <p class="step-desc">No new upload needed — this replays the government's monthly visa bulletin publishing, exactly as an unattended scheduled check would see it, using real captured September/October 2025 DOS bulletin data for a separate seeded monitoring case (not the documents you uploaded above).</p>
+    <div class="demo-buttons">
+      <button class="btn-quiet" id="bulletin-sep-btn">Replay September update</button>
+      <button class="btn-quiet" id="bulletin-oct-btn">Replay October update</button>
+    </div>
+
+    <details class="extras">
+      <summary>How the decision gate filters events (technical detail)</summary>
+      <p class="upload-note">Every event — a document upload or a bulletin update — passes through the same materiality/actionability/window/novelty gate before anything is ever surfaced to you.</p>
       <div class="demo-buttons">
-        <button class="btn-quiet" id="load-btn">Load sample case</button>
         <button class="btn-quiet" id="gate-btn">Inspect decision gate</button>
-        <button class="btn-quiet" id="bulletin-sep-btn">Replay September update</button>
-        <button class="btn-quiet" id="bulletin-oct-btn">Replay October update</button>
-        <button class="btn-quiet" id="reset-btn">Reset demo</button>
       </div>
       <div class="gate-illustration hidden" id="gate-illustration">
-        <h2 class="section-heading" style="margin-top:16px">How the decision gate filters events</h2>
         <div id="gate-rows"></div>
       </div>
     </details>
-  </main>
-
-  <main id="panel-recall" class="panel hidden">
-    <section class="review">
-      <div class="review-empty" id="recall-empty">
-        <p>Expand <strong>Demo controls</strong> below to run the recall-matching demo against a real product recall.</p>
-      </div>
-      <div class="review-loaded hidden" id="recall-loaded">
-        <div class="status-chip" id="recall-status"></div>
-        <h1 class="review-headline" id="recall-headline"></h1>
-        <p class="review-note" id="recall-note"></p>
-        <div class="review-actions">
-          <button class="btn-primary" id="open-recall-draft-btn"></button>
-        </div>
-      </div>
-    </section>
-
-    <section style="margin-bottom: 34px">
-      <h2 class="section-heading">Recent monitoring activity</h2>
-      <div class="activity-empty" id="recall-activity-empty">No activity yet — run the recall demo below.</div>
-      <div id="recall-activity-list"></div>
-    </section>
-
-    <details class="demo-controls">
-      <summary>Demo controls</summary>
-      <p class="demo-note">Matches one real, live product recall against a seeded receipt and an unmatched receipt, to prove the same watch-and-notify engine used for immigration works on an unrelated domain. Demo-scope exact match, not a general-purpose matcher.</p>
-      <div class="demo-buttons">
-        <button class="btn-quiet" id="recall-btn">Run recall demo</button>
-      </div>
-    </details>
-  </main>
+  </section>
 </div>
 
-<div class="overlay" id="draft-overlay">
-  <div class="overlay-panel" id="draft-panel">
+<div class="overlay" id="draft-overlay" inert>
+  <div class="overlay-panel" id="draft-panel" role="dialog" aria-modal="true" aria-labelledby="draft-subject">
     <button class="overlay-close" id="draft-close">Close</button>
     <p class="overlay-subject" id="draft-subject"></p>
     <p class="overlay-mode" id="draft-mode"></p>
@@ -320,16 +360,16 @@
 </div>
 
 <script>
-// Core interactivity (button wiring, tab switching, all fetch/render logic)
-// must never depend on an external CDN resolving — Lucide icons and Motion
-// animations are loaded separately and treated as optional enhancements
-// (see the two small loader scripts below and icon()/fx()'s fallbacks), so
-// a slow or unreachable CDN degrades the page's polish, never its function.
+// Core interactivity (button wiring, all fetch/render logic) must never
+// depend on an external CDN resolving — Lucide icons and Motion animations
+// are loaded separately and treated as optional enhancements (see the two
+// small loader scripts below and icon()/fx()'s fallbacks), so a slow or
+// unreachable CDN degrades the page's polish, never its function.
 
 // Dynamic values (API/model text) always go through textContent, never
 // innerHTML — a draft or evidence string containing markup must render as
-// literal text, not be parsed as HTML (F5). el() is the one place strings
-// become DOM content, and it always uses textContent.
+// literal text, not be parsed as HTML (F5/security). el() is the one place
+// strings become DOM content, and it always uses textContent.
 function el(tag, { className, text, id } = {}) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -367,15 +407,20 @@ document.getElementById('error-dismiss').addEventListener('click', clearError);
 window.addEventListener('unhandledrejection', (e) => showError('Unexpected error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
 window.addEventListener('error', (e) => showError('Unexpected error: ' + e.message));
 
+// JSON requests (body is a plain object) and multipart uploads (body is a
+// FormData) both go through here: FormData must never be JSON-stringified,
+// and its Content-Type (with the multipart boundary) must be left for the
+// browser to set — only JSON bodies get an explicit header (F5/F6).
 async function apiFetch(path, { method = 'GET', body, timeoutMs = 20000 } = {}) {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response;
   try {
     response = await fetch(path, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : undefined,
+      body: body === undefined ? undefined : (isFormData ? body : JSON.stringify(body)),
       signal: controller.signal,
     });
   } catch (err) {
@@ -396,6 +441,15 @@ async function apiFetch(path, { method = 'GET', body, timeoutMs = 20000 } = {}) 
   return data;
 }
 
+// A checked binary download: failures reject (and so never populate a file
+// input with a broken/empty file) rather than silently wrapping whatever
+// came back, including an error page, in a File (F6).
+async function fetchSampleBlob(key) {
+  const response = await fetch(`/api/sample-documents/${key}`);
+  if (!response.ok) throw new Error(`Could not download the ${key} sample (status ${response.status})`);
+  return response.blob();
+}
+
 async function runAction(label, button, fn) {
   clearError();
   if (button) button.disabled = true;
@@ -408,17 +462,8 @@ async function runAction(label, button, fn) {
   }
 }
 
-function extractionModeLabel(mode, reason) {
-  if (mode === 'live') return 'Live Bedrock parse';
-  return reason && /unavailable/.test(reason) ? 'Recorded replay · live Bedrock unavailable' : 'Recorded demo';
-}
-
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fx(target, keyframes, options) {
-  // Respecting reduced motion means skipping the animation, not the result:
-  // apply each property's final keyframe value instantly instead. The same
-  // fallback covers Motion not having loaded yet (see the loader module at
-  // the end of the file) — the UI is always visually correct either way.
   if (reduceMotion || !window.__motionAnimate) {
     const node = typeof target === 'string' ? document.querySelector(target) : target;
     for (const [prop, values] of Object.entries(keyframes)) {
@@ -427,6 +472,13 @@ function fx(target, keyframes, options) {
     return;
   }
   return window.__motionAnimate(target, keyframes, options);
+}
+
+function wireActivatable(node, handler) {
+  node.addEventListener('click', handler);
+  node.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(e); }
+  });
 }
 
 const FIELD_LABELS = {
@@ -450,13 +502,10 @@ function statusChip(container, { label, tone, icon: iconName }) {
   container.replaceChildren(icon(iconName), el('span', { text: label }));
 }
 
-// The header's meta text is per-tab (each tab has its own mode label), so
-// switching tabs must restore whichever label that tab last set rather
-// than showing the other tab's mode.
-let caseMetaLabel = 'Sample case';
-let recallMetaLabel = 'Recall demo';
-function updateTopMeta() {
-  document.getElementById('top-meta').textContent = tabCase.classList.contains('active') ? caseMetaLabel : recallMetaLabel;
+let topMetaLabel = 'Upload your documents to begin';
+function setTopMeta(text) {
+  topMetaLabel = text;
+  document.getElementById('top-meta').textContent = topMetaLabel;
 }
 
 function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
@@ -476,14 +525,18 @@ function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
   renderIcons();
 }
 
-// --- Draft side panel (shared by both tabs) -------------------------------
+// --- Draft side panel (R8: focus entry/containment/return, inert closed
+// state; approval actions grafted in from the approval feature) -----------
 
 const overlay = document.getElementById('draft-overlay');
 const overlayPanel = document.getElementById('draft-panel');
+const draftClose = document.getElementById('draft-close');
 const draftActions = document.getElementById('draft-actions');
 const draftApproveBtn = document.getElementById('draft-approve-btn');
 const draftApproved = document.getElementById('draft-approved');
+let lastFocusedBeforeDraft = null;
 let currentDraft = null;
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 function renderApproval(draft) {
   if (!draft || draft.kind !== 'attorney_review' || !draft.ref) { draftActions.classList.add('hidden'); return; }
@@ -514,69 +567,192 @@ draftApproveBtn.addEventListener('click', () => runAction('Approve for attorney 
   }
 }));
 
-function openDraft(draft, modeLabel) {
+function openDraft(draft, modeLabel, triggerEl) {
   currentDraft = draft;
+  lastFocusedBeforeDraft = triggerEl || document.activeElement;
   document.getElementById('draft-subject').textContent = draft.subject;
   const intro = draft.used_llm_personalization === undefined ? ''
     : (draft.used_llm_personalization ? ' · intro written by the model' : ' · deterministic text only, no model intro');
   document.getElementById('draft-mode').textContent = (modeLabel || '') + intro;
   document.getElementById('draft-body').textContent = draft.body;
   renderApproval(draft);
+  overlay.removeAttribute('inert');
   overlay.classList.add('open');
   fx(overlayPanel, { transform: ['translateX(100%)', 'translateX(0%)'] }, { duration: 0.35, easing: 'ease-out' });
+  draftClose.focus();
 }
 
 function closeDraft() {
-  const done = () => overlay.classList.remove('open');
+  let settled = false;
+  const done = () => {
+    if (settled) return;
+    settled = true;
+    overlay.classList.remove('open');
+    overlay.setAttribute('inert', '');
+    if (lastFocusedBeforeDraft && typeof lastFocusedBeforeDraft.focus === 'function') lastFocusedBeforeDraft.focus();
+  };
   const anim = fx(overlayPanel, { transform: ['translateX(0%)', 'translateX(100%)'] }, { duration: 0.25, easing: 'ease-in' });
-  if (anim && anim.finished) anim.finished.then(done); else done();
+  if (anim && anim.finished) {
+    anim.finished.then(done).catch(done);
+    // Safety net: a WAAPI/Motion "finished" promise can fail to settle in
+    // some environments (e.g. a backgrounded tab pausing the animation) —
+    // closing the drawer and restoring focus must not depend on it forever.
+    setTimeout(done, 400);
+  } else {
+    done();
+  }
 }
 
-document.getElementById('draft-close').addEventListener('click', closeDraft);
+draftClose.addEventListener('click', closeDraft);
 overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDraft(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeDraft(); });
+overlayPanel.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const focusable = Array.from(overlayPanel.querySelectorAll(FOCUSABLE_SELECTOR));
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
-// --- Case review tab --------------------------------------------------------
+// --- Step 1: upload -------------------------------------------------------
 
-async function loadSampleCase() {
-  const extraction = await apiFetch('/api/sample-case');
-  const modeLabel = extractionModeLabel(extraction.mode, extraction.mode_reason);
-  caseMetaLabel = `Sample case · ${modeLabel}`;
-  updateTopMeta();
-  const modeNote = document.getElementById('mode-note');
-  modeNote.textContent = extraction.mode === 'live' ? 'Fields parsed live by Bedrock from the specimen images.'
-    : `Recorded replay of the Bedrock response for these specimens. ${extraction.mode_reason || ''}`.trim();
-  modeNote.classList.remove('hidden');
+const DOCUMENT_KEYS = ['i94', 'i797', 'passport'];
+const selectedFiles = { i94: null, i797: null, passport: null };
+let uploadVersion = 0; // F5: a stale in-flight response is dropped, never rendered over a newer one
+let lastSubmissionRef = null; // fed to /api/ask so check_uploaded_case can discuss this specific case
+
+function renderPreview(key, file) {
+  const preview = document.getElementById(`preview-${key}`);
+  preview.replaceChildren();
+  if (!file) {
+    preview.classList.add('hidden');
+    return;
+  }
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  img.alt = '';
+  preview.append(img, el('span', { text: file.name }));
+  preview.classList.remove('hidden');
+}
+
+function updateProcessButtonState() {
+  const allSelected = DOCUMENT_KEYS.every((key) => selectedFiles[key] instanceof File);
+  document.getElementById('process-btn').disabled = !allSelected;
+}
+
+function handleFileSelected(key, file) {
+  selectedFiles[key] = file || null;
+  renderPreview(key, file);
+  updateProcessButtonState();
+  // F1/F5 UX: a result already on screen was computed from the *previous*
+  // selection — say so rather than leaving it looking current until the
+  // next process click quietly replaces it.
+  if (!document.getElementById('review-loaded').classList.contains('hidden')) {
+    document.getElementById('process-status').textContent = 'Selection changed — click Process documents to update the review.';
+  }
+}
+
+function setUploadControlsDisabled(disabled) {
+  DOCUMENT_KEYS.forEach((key) => {
+    document.getElementById(`upload-${key}`).disabled = disabled;
+    document.getElementById(`use-sample-${key}`).disabled = disabled;
+  });
+  document.getElementById('load-bundled-btn').disabled = disabled;
+}
+
+DOCUMENT_KEYS.forEach((key) => {
+  const input = document.getElementById(`upload-${key}`);
+  input.addEventListener('change', () => handleFileSelected(key, input.files[0] || null));
+
+  document.getElementById(`use-sample-${key}`).addEventListener('click', (e) => runAction('Use downloaded sample', e.currentTarget, async () => {
+    const blob = await fetchSampleBlob(key);
+    const file = new File([blob], `sample-${key}.png`, { type: 'image/png' });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    handleFileSelected(key, file);
+  }));
+});
+
+function resetReviewSection() {
+  // R7: unconditional reset run before every render — a prior error state
+  // (or a prior successful load) must never leave stale display/text
+  // behind for the next render, whichever branch it takes.
+  document.getElementById('review-empty').classList.add('hidden');
+  document.getElementById('review-loaded').classList.remove('hidden');
+  document.getElementById('comparison').style.display = '';
+  document.getElementById('comparison-gap').textContent = '';
+  document.getElementById('date-admit_until').textContent = '';
+  document.getElementById('date-i797_valid_until').textContent = '';
+  document.getElementById('review-note').textContent = '';
+  const openBtn = document.getElementById('open-draft-btn');
+  openBtn.style.display = 'none';
+  openBtn.onclick = null;
+}
+
+async function processDocuments() {
+  const processBtn = document.getElementById('process-btn');
+  const status = document.getElementById('process-status');
+  const myVersion = ++uploadVersion;
+  processBtn.disabled = true;
+  setUploadControlsDisabled(true);
+  status.replaceChildren(el('span', { className: 'spinner' }), document.createTextNode('Processing…'));
+
+  const formData = new FormData();
+  DOCUMENT_KEYS.forEach((key) => formData.append(key, selectedFiles[key]));
+
+  let result;
+  try {
+    result = await apiFetch('/api/process-documents', { method: 'POST', body: formData, timeoutMs: 60000 });
+  } catch (err) {
+    setUploadControlsDisabled(false);
+    updateProcessButtonState();
+    if (myVersion !== uploadVersion) return; // superseded by a newer submission
+    status.textContent = '';
+    showError(`Process documents failed: ${err && err.message ? err.message : err}`);
+    return;
+  }
+  setUploadControlsDisabled(false);
+  updateProcessButtonState();
+  status.textContent = '';
+  if (myVersion !== uploadVersion) return; // a newer submission started; drop this stale result
+
+  lastSubmissionRef = result.ref || null;
+  renderResult(result);
+}
+
+function renderResult(result) {
+  resetReviewSection();
+
+  const modeLabel = result.mode === 'live' ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
+  setTopMeta(`Case review · ${modeLabel}`);
+  document.getElementById('mode-note').textContent = result.mode === 'live'
+    ? 'Live Bedrock parse: your uploaded document pixels were read directly.'
+    : `No live AWS credentials in this environment — extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels. ${result.mode_reason || ''}`.trim();
 
   const docList = document.getElementById('doc-list');
-  docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map(key => {
-    const status = extraction.statuses[key];
-    const value = extraction.fields[key] ?? `Needs review (${status})`;
+  docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map((key) => {
+    const status = result.statuses[key];
+    const value = result.fields[key] ?? `Needs review (${status})`;
     const card = el('div', { className: 'doc-card', id: `doc-card-${key}` });
     card.tabIndex = 0;
+    card.setAttribute('role', 'button');
     const head = el('div', { className: 'doc-card-head' });
     head.append(icon('file-text'), el('span', { text: DOC_NAMES[key] }));
     card.append(head, el('div', { className: 'doc-card-date', text: value }),
-      el('div', { className: 'doc-card-evidence', text: extraction.evidence[key] || '(no evidence)' }));
-    const highlight = () => highlightDate(key);
-    card.addEventListener('click', highlight);
-    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); highlight(); } });
+      el('div', { className: 'doc-card-evidence', text: result.evidence[key] || '(no evidence)' }));
+    wireActivatable(card, () => highlightDate(key));
     return card;
   }));
   renderIcons();
-
-  const result = await apiFetch('/api/process-sample-case', { method: 'POST' });
-  const reviewEmpty = document.getElementById('review-empty');
-  const reviewLoaded = document.getElementById('review-loaded');
-  reviewEmpty.classList.add('hidden');
-  reviewLoaded.classList.remove('hidden');
 
   if (result.error) {
     statusChip(document.getElementById('review-status'), { label: 'Needs review', tone: 'review', icon: 'circle-alert' });
     document.getElementById('review-headline').textContent = 'Document extraction needs review';
     document.getElementById('comparison').style.display = 'none';
     document.getElementById('review-note').textContent = result.error;
-    document.getElementById('open-draft-btn').style.display = 'none';
     addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
       { label: 'Document review — I-94 vs I-797', outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
     return;
@@ -585,12 +761,10 @@ async function loadSampleCase() {
   const outcome = describeOutcome(result.alert.decision, !!result.draft);
   statusChip(document.getElementById('review-status'), outcome);
 
-  document.getElementById('date-admit_until').textContent = extraction.fields.admit_until;
-  document.getElementById('date-i797_valid_until').textContent = extraction.fields.i797_valid_until;
+  document.getElementById('date-admit_until').textContent = result.fields.admit_until;
+  document.getElementById('date-i797_valid_until').textContent = result.fields.i797_valid_until;
 
   if (result.draft) {
-    // The rule's own message states the gap in words; pull the headline
-    // number from it rather than recomputing date math in the browser.
     const gapWords = result.draft.body.match(/disagree by (\d+) day/);
     const gapText = gapWords ? `${gapWords[1]} days` : 'a discrepancy';
     document.getElementById('review-headline').textContent = `Your document dates differ by ${gapText}`;
@@ -598,23 +772,20 @@ async function loadSampleCase() {
     document.getElementById('review-note').textContent = 'Review this discrepancy with your attorney.';
     const openBtn = document.getElementById('open-draft-btn');
     openBtn.replaceChildren(icon('mail'), document.createTextNode('Review attorney draft'));
-    openBtn.onclick = () => openDraft(result.draft, modeLabel);
+    openBtn.onclick = (e) => openDraft(result.draft, modeLabel, e.currentTarget);
     openBtn.style.display = '';
 
-    fx(document.getElementById('comparison-connector'), { transform: ['scaleX(0)', 'scaleX(1)'] }, { duration: 0.4, easing: 'ease-out' });
-    fx(document.getElementById('comparison-gap'), { opacity: [0, 1] }, { duration: 0.3, delay: 0.25 });
+    fx(document.getElementById('comparison-gap'), { opacity: [0, 1] }, { duration: 0.3 });
   } else {
     document.getElementById('review-headline').textContent = 'No discrepancy found';
     document.getElementById('review-note').textContent = 'The I-94 admit-until date matches the I-797 validity end date.';
-    document.getElementById('open-draft-btn').style.display = 'none';
-    fx(document.getElementById('comparison-connector'), { transform: ['scaleX(0)', 'scaleX(1)'] }, { duration: 0.4, easing: 'ease-out' });
   }
 
   addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
     label: 'Document review — I-94 vs I-797',
     outcome,
     detail: result.alert.reason,
-    onOpen: result.draft ? () => openDraft(result.draft, modeLabel) : null,
+    onOpen: result.draft ? (e) => openDraft(result.draft, modeLabel, e.currentTarget) : null,
   });
 }
 
@@ -624,49 +795,27 @@ function highlightDate(key) {
   fx(dateEl, { backgroundColor: ['transparent', 'rgba(88,191,169,0.28)', 'transparent'] }, { duration: 0.7, easing: 'ease-out' });
 }
 
+wireActivatable(document.getElementById('comparison-doc-i94'), () => highlightDate('admit_until'));
+wireActivatable(document.getElementById('comparison-doc-i797'), () => highlightDate('i797_valid_until'));
+
 document.getElementById('view-docs-btn').addEventListener('click', () => {
   document.getElementById('doc-list').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
 });
 
-async function pollBulletin(month, label) {
-  const result = await apiFetch('/api/bulletin-poll', { method: 'POST', body: { month } });
+document.getElementById('process-btn').addEventListener('click', processDocuments);
 
-  if (result.error) {
-    addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
-      { label: `Visa bulletin — ${label}`, outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
-    return;
+const loadBundledBtn = document.getElementById('load-bundled-btn');
+loadBundledBtn.addEventListener('click', () => runAction('Load bundled sample', loadBundledBtn, async () => {
+  for (const key of DOCUMENT_KEYS) {
+    const blob = await fetchSampleBlob(key);
+    const file = new File([blob], `sample-${key}.png`, { type: 'image/png' });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    document.getElementById(`upload-${key}`).files = transfer.files;
+    handleFileSelected(key, file);
   }
-
-  const outcome = describeOutcome(result.alert.decision, !!result.draft);
-  const cutoffPlain = { current: 'is now current', not_current: 'is not yet current', retrogressed: 'moved backward' }[result.cutoff_status] || result.cutoff_status;
-  addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
-    label: `Visa bulletin — ${label}`,
-    outcome,
-    detail: `${result.case_name} ${cutoffPlain} — ${result.alert.reason}`,
-    onOpen: result.draft ? () => openDraft(result.draft, 'Recorded demo — unattended bulletin check') : null,
-  });
-}
-
-async function showGateDemo() {
-  const data = await apiFetch('/api/gate-demo');
-  const rows = document.getElementById('gate-rows');
-  rows.replaceChildren(...data.results.map(r => {
-    const outcome = r.decision === 'surfaced' ? { label: 'Needs review', tone: 'review' } : { label: 'No new notification', tone: 'routine' };
-    const row = el('div', { className: 'gate-row' });
-    row.append(el('span', { text: r.label }), el('span', { className: `gate-pill tone-${outcome.tone}`, text: outcome.label }));
-    return row;
-  }));
-  document.getElementById('gate-illustration').classList.remove('hidden');
-}
-
-const loadBtn = document.getElementById('load-btn');
-const gateBtn = document.getElementById('gate-btn');
-const sepBtn = document.getElementById('bulletin-sep-btn');
-const octBtn = document.getElementById('bulletin-oct-btn');
-loadBtn.addEventListener('click', () => runAction('Load sample case', loadBtn, loadSampleCase));
-gateBtn.addEventListener('click', () => runAction('Inspect decision gate', gateBtn, showGateDemo));
-sepBtn.addEventListener('click', () => runAction('Replay September update', sepBtn, () => pollBulletin('2025-09', 'September 2025')));
-octBtn.addEventListener('click', () => runAction('Replay October update', octBtn, () => pollBulletin('2025-10', 'October 2025')));
+  await processDocuments();
+}));
 
 // --- Ask the guardian (a Strands agent over the engine's checks) ---------
 
@@ -705,10 +854,9 @@ function renderTrace(question, steps) {
   askTrace.classList.remove('hidden');
 }
 const ASK_SUGGESTIONS = [
+  'What does my uploaded case show?',
   'My I-94 says 2026-11-03 and my I-797 says 2026-12-28. Do they disagree?',
-  'Run the sample case check.',
   'Did the October 2025 bulletin change anything for the seeded case?',
-  'Is my speaker receipt affected by a recall?',
 ];
 const askSuggestions = document.getElementById('ask-suggestions');
 for (const question of ASK_SUGGESTIONS) {
@@ -725,7 +873,9 @@ async function askGuardian(question) {
   askTools.replaceChildren();
   renderTrace(question, []);
   try {
-    const res = await apiFetch('/api/ask', { method: 'POST', body: { question }, timeoutMs: 60000 });
+    const body = { question };
+    if (lastSubmissionRef) body.submission_ref = lastSubmissionRef;
+    const res = await apiFetch('/api/ask', { method: 'POST', body, timeoutMs: 60000 });
     if (!res.available || res.error) {
       askAnswer.classList.add('error');
       askAnswerText.textContent = res.error || 'The guardian is unavailable right now.';
@@ -738,88 +888,54 @@ async function askGuardian(question) {
     }
   } catch (err) {
     askAnswer.classList.add('error');
-    askAnswerText.textContent = 'Request failed: ' + err;
+    askAnswerText.textContent = 'Request failed: ' + (err && err.message ? err.message : err);
   } finally {
     askBtn.disabled = false;
   }
 }
 askForm.addEventListener('submit', (e) => { e.preventDefault(); const q = askInput.value.trim(); if (q) askGuardian(q); });
 
-// --- Recall tab --------------------------------------------------------------
+// --- Step 3: bulletin replay ------------------------------------------------
 
-async function runRecallDemo() {
-  const matched = await apiFetch('/api/recalls/check', { method: 'POST', body: { receipt: 'seeded' } });
-  const unmatched = await apiFetch('/api/recalls/check', { method: 'POST', body: { receipt: 'unmatched' } });
+async function pollBulletin(month, label) {
+  const result = await apiFetch('/api/bulletin-poll', { method: 'POST', body: { month } });
 
-  const feedLabel = matched.mode === 'live' ? 'Live CPSC feed' : 'Recorded demo (feed unavailable)';
-  recallMetaLabel = `Recall demo · ${feedLabel}`;
-  updateTopMeta();
-
-  document.getElementById('recall-empty').classList.add('hidden');
-  document.getElementById('recall-loaded').classList.remove('hidden');
-
-  const matchedOutcome = matched.matched
-    ? describeOutcome(matched.alert.decision, !!matched.draft)
-    : { label: 'No new notification', tone: 'quiet', icon: 'circle-check' };
-  statusChip(document.getElementById('recall-status'), matchedOutcome);
-  document.getElementById('recall-headline').textContent = matched.matched ? 'A recall matches your receipt' : 'No recall match found';
-  document.getElementById('recall-note').textContent = matched.message;
-
-  const openBtn = document.getElementById('open-recall-draft-btn');
-  if (matched.draft) {
-    openBtn.replaceChildren(icon('mail'), document.createTextNode('Review remedy details'));
-    openBtn.style.display = '';
-    openBtn.onclick = () => openDraft(matched.draft, feedLabel);
-  } else {
-    openBtn.style.display = 'none';
+  if (result.error) {
+    addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
+      { label: `Visa bulletin — ${label}`, outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
+    return;
   }
 
-  const list = document.getElementById('recall-activity-list');
-  const empty = document.getElementById('recall-activity-empty');
-  addActivityRow(list, empty, {
-    label: 'Recall check — seeded receipt',
-    outcome: matchedOutcome,
-    detail: matched.message,
-    onOpen: matched.draft ? () => openDraft(matched.draft, feedLabel) : null,
-  });
-  addActivityRow(list, empty, {
-    label: 'Recall check — unmatched receipt',
-    outcome: { label: 'No new notification', tone: 'quiet', icon: 'circle-check' },
-    detail: unmatched.message,
+  const outcome = describeOutcome(result.alert.decision, !!result.draft);
+  const cutoffPlain = { current: 'is now current', not_current: 'is not yet current', retrogressed: 'moved backward' }[result.cutoff_status] || result.cutoff_status;
+  addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
+    label: `Visa bulletin — ${label}`,
+    outcome,
+    detail: `${result.case_name} (priority date ${result.priority_date}) ${cutoffPlain} — a separate seeded monitoring example, not your uploaded case — ${result.alert.reason}`,
+    onOpen: result.draft ? (e) => openDraft(result.draft, 'Recorded demo — captured bulletin data, unattended check', e.currentTarget) : null,
   });
 }
 
-const recallBtn = document.getElementById('recall-btn');
-recallBtn.addEventListener('click', () => runAction('Run recall demo', recallBtn, runRecallDemo));
-
-// --- Tabs --------------------------------------------------------------------
-
-const tabCase = document.getElementById('tab-case');
-const tabRecall = document.getElementById('tab-recall');
-const panelCase = document.getElementById('panel-case');
-const panelRecall = document.getElementById('panel-recall');
-
-const LEGAL_NOTES = {
-  case: 'Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.',
-  recall: 'Demo scope — one seeded receipt matched exactly against the CPSC recall feed. Confirm any remedy on cpsc.gov before acting; this is not a product-safety determination.',
-};
-const legalNote = document.getElementById('legal-note');
-
-function selectTab(which) {
-  const caseActive = which === 'case';
-  legalNote.textContent = LEGAL_NOTES[caseActive ? 'case' : 'recall'];
-  tabCase.classList.toggle('active', caseActive);
-  tabRecall.classList.toggle('active', !caseActive);
-  tabCase.setAttribute('aria-selected', String(caseActive));
-  tabRecall.setAttribute('aria-selected', String(!caseActive));
-  panelCase.classList.toggle('hidden', !caseActive);
-  panelRecall.classList.toggle('hidden', caseActive);
-  updateTopMeta();
+async function showGateDemo() {
+  const data = await apiFetch('/api/gate-demo');
+  const rows = document.getElementById('gate-rows');
+  rows.replaceChildren(...data.results.map((r) => {
+    const outcome = r.decision === 'surfaced' ? { label: 'Needs review', tone: 'review' } : { label: 'No new notification', tone: 'routine' };
+    const row = el('div', { className: 'gate-row' });
+    row.append(el('span', { text: r.label }), el('span', { className: `gate-pill tone-${outcome.tone}`, text: outcome.label }));
+    return row;
+  }));
+  document.getElementById('gate-illustration').classList.remove('hidden');
 }
-tabCase.addEventListener('click', () => selectTab('case'));
-tabRecall.addEventListener('click', () => selectTab('recall'));
 
-// --- Reset ---------------------------------------------------------------------
+const gateBtn = document.getElementById('gate-btn');
+const sepBtn = document.getElementById('bulletin-sep-btn');
+const octBtn = document.getElementById('bulletin-oct-btn');
+gateBtn.addEventListener('click', () => runAction('Inspect decision gate', gateBtn, showGateDemo));
+sepBtn.addEventListener('click', () => runAction('Replay September update', sepBtn, () => pollBulletin('2025-09', 'September 2025')));
+octBtn.addEventListener('click', () => runAction('Replay October update', octBtn, () => pollBulletin('2025-10', 'October 2025')));
+
+// --- Reset -------------------------------------------------------------------
 
 const resetBtn = document.getElementById('reset-btn');
 resetBtn.addEventListener('click', () => runAction('Reset demo', resetBtn, async () => {
@@ -827,7 +943,7 @@ resetBtn.addEventListener('click', () => runAction('Reset demo', resetBtn, async
   location.reload();
 }));
 
-// --- Guided demo via URL (?demo=case|full|recall, &open=draft) -------------------
+// --- Guided demo via URL (?demo=case, &open=draft) --------------------------
 // Runs the same buttons in order on load, for screenshots and rehearsals.
 // It never changes behavior when the parameter is absent.
 
@@ -836,15 +952,14 @@ async function runGuidedDemo() {
   const demo = params.get('demo');
   if (!demo) return;
   await runAction('Guided demo', null, async () => {
-    if (demo === 'case' || demo === 'full') await loadSampleCase();
+    if (demo === 'case' || demo === 'full') await loadBundledBtn.click();
     if (demo === 'full') {
       await pollBulletin('2025-09', 'September 2025');
       await pollBulletin('2025-10', 'October 2025');
     }
-    if (demo === 'recall') { selectTab('recall'); await runRecallDemo(); }
     if (params.get('open') === 'draft') {
-      const btn = demo === 'recall' ? document.getElementById('open-recall-draft-btn') : document.getElementById('open-draft-btn');
-      if (btn && btn.onclick) btn.onclick();
+      const btn = document.getElementById('open-draft-btn');
+      if (btn && btn.onclick) btn.onclick({ currentTarget: btn });
     }
   });
 }

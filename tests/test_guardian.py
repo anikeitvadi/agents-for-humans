@@ -15,7 +15,7 @@ from agent.packs.recalls.feed import load_fallback_recall
 from tests.scripted_model import ScriptedModel
 
 RECEIPTS = Path(__file__).resolve().parent.parent / "fixtures" / "recalls" / "receipts.json"
-EXPECTED_TOOLS = ["check_document_dates", "run_sample_case_check", "check_visa_bulletin", "check_recall"]
+EXPECTED_TOOLS = ["check_document_dates", "run_sample_case_check", "check_uploaded_case", "check_visa_bulletin", "check_recall"]
 
 
 def _receipts() -> dict:
@@ -45,7 +45,7 @@ def test_tool_names_and_schemas(tools):
 
 
 def test_tools_work_as_plain_functions(tools):
-    dates, sample, bulletin, recall = tools
+    dates, sample, uploaded, bulletin, recall = tools
 
     gap = dates(i94_admit_until="2026-11-03", i797_valid_until="2026-12-28")
     assert gap["status"] == "success"
@@ -57,6 +57,8 @@ def test_tools_work_as_plain_functions(tools):
     assert case["decision"] == "surfaced"
     assert "55" in case["draft"]["body"]
 
+    assert uploaded()["status"] == "error"  # no submission ref bound in this fixture
+
     october = bulletin(month="2025-10")["content"][0]["json"]
     assert october["cutoff_status"] == "current"
     assert october["decision"] == "surfaced"
@@ -66,6 +68,52 @@ def test_tools_work_as_plain_functions(tools):
     assert matched["matched"] is True
     assert matched["decision"] == "surfaced"
     assert recall(receipt="unmatched")["content"][0]["json"]["matched"] is False
+
+
+def test_check_uploaded_case_reports_the_bound_submission(tmp_path):
+    from agent.packs.immigration.pipeline import run_case_from_documents, SPECIMENS_DIR
+
+    store = Store(str(tmp_path / "ledger.db"))
+    documents = {key: (SPECIMENS_DIR / f"{key}.png").read_bytes() for key in ("i94", "i797", "passport")}
+    processed = run_case_from_documents(
+        store, clock_id="c1", client=RecordedResponseClient(), mode="recorded", model_id=BEDROCK_MODEL_ID, documents=documents
+    )
+
+    bound_tools = build_guardian_tools(
+        store,
+        extraction_client=RecordedResponseClient(),
+        extraction_mode="recorded",
+        model_id=BEDROCK_MODEL_ID,
+        recall_item=load_fallback_recall(),
+        recall_mode="fallback",
+        receipts_loader=_receipts,
+        prior_bulletin_months=PRIOR_CAPTURED_MONTH,
+        current_submission_ref=processed.ref,
+    )
+    _, _, check_uploaded_case, _, _ = bound_tools
+
+    result = check_uploaded_case()["content"][0]["json"]
+    assert result["decision"] == "surfaced"
+    assert result["fields"]["admit_until"] == "2026-11-03"
+    assert result["draft"] is not None
+
+
+def test_check_uploaded_case_with_a_cleared_ref_reports_not_found(tmp_path):
+    store = Store(str(tmp_path / "ledger.db"))
+    bound_tools = build_guardian_tools(
+        store,
+        extraction_client=RecordedResponseClient(),
+        extraction_mode="recorded",
+        model_id=BEDROCK_MODEL_ID,
+        recall_item=load_fallback_recall(),
+        recall_mode="fallback",
+        receipts_loader=_receipts,
+        prior_bulletin_months=PRIOR_CAPTURED_MONTH,
+        current_submission_ref={"clock_id": "c1", "event_id": "doc-nonexistent", "rule_version": "v1"},
+    )
+    _, _, check_uploaded_case, _, _ = bound_tools
+
+    assert check_uploaded_case()["status"] == "error"
 
 
 def test_agent_calls_the_date_tool_and_reports_it(tools):
