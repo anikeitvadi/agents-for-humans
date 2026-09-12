@@ -1,4 +1,7 @@
-# Handoff (updated 2026-09-11, night)
+# Handoff (updated 2026-09-11, late night)
+
+**RESUME HERE (for the next session).** main = `972c56e`, 204 offline tests pass, everything pushed. Video + presentation are Sunday. Saturday plan: (1) Ani gives UI instructions → do a UI polish pass on the current single-story upload layout (no rewrite), browser-test, regenerate `docs/screenshots/` via `/?demo=full` and `/?demo=case&open=draft`; (2) Darshan does the Bedrock-side checklist below (record scenarios, redeploy Runtime, provision the unattended run, SES sender, probe, optional App Runner) and pastes real outputs into README "Evidence"; (3) update `docs/submission/video-script.md` with three new beats (scenario picker "Dates agree" stays silent; the SNS ping email arriving; a follow-up question to the guardian in the same session); (4) flip repo public + MIT in About; Devpost text from `docs/submission/devpost-description.md`; three posts from `docs/submission/builder-posts.md`. Presentation plan: `docs/submission/presentation-plan.md`. Bedrock is blocked on Ani's account (payment-auth support case open) and works on Darshan's. Local run: `rm -f data/demo.db && .venv/bin/uvicorn agent.app:app --reload` → http://127.0.0.1:8000/.
+
 
 **2026-09-11 late night (Claude): "wow" batch, part 1 (Ani approved the full list).** Committed on main:
 1. **CI**: `.github/workflows/tests.yml` runs the offline suite on push/PR; README badge.
