@@ -165,6 +165,11 @@ def test_upload_controls_are_disabled_during_processing():
 
 def test_load_bundled_sample_shortcut_exists_and_processes():
     assert 'id="load-bundled-btn"' in _UI_SOURCE
-    shortcut_start = _ALL_INLINE_JS.index("loadBundledBtn.addEventListener")
-    shortcut_body = _ALL_INLINE_JS[shortcut_start : shortcut_start + 600]
-    assert "processDocuments()" in shortcut_body
+    # The click handler and the guided demo share one awaitable function,
+    # so a scripted run (?demo=...) waits for processing to finish instead
+    # of firing a click and moving on.
+    listener_start = _ALL_INLINE_JS.index("loadBundledBtn.addEventListener")
+    assert "loadBundledSample" in _ALL_INLINE_JS[listener_start : listener_start + 200]
+    fn_start = _ALL_INLINE_JS.index("async function loadBundledSample()")
+    assert "processDocuments()" in _ALL_INLINE_JS[fn_start : fn_start + 600]
+    assert "await loadBundledSample()" in _ALL_INLINE_JS  # guided demo path
