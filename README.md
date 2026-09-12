@@ -1,5 +1,7 @@
 # Immigration Status Guardian
 
+[![tests](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml/badge.svg)](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml)
+
 **One engine that reads the government so you don't have to.** Built for AWS "Agents for Humans" (Strands Agents SDK, Everyday track, due Sep 14, 2026), deployed on Amazon Bedrock AgentCore Runtime.
 
 If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. This agent reads the documents, compares the dates the way a paralegal would, and interrupts you exactly once: "Your document dates differ by 55 days. Review this with your attorney." Then it goes quiet, and keeps watching the Visa Bulletin for you.
