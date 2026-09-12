@@ -132,7 +132,6 @@ def invoke(payload: dict | None) -> dict:
     result = run_sample_case(
         _store,
         clock_id=clock_id,
-        event_id=event_id,
         client=client,
         mode=mode,
         model_id=BEDROCK_MODEL_ID,

@@ -7,6 +7,15 @@ from fastapi.testclient import TestClient
 
 from agent.app import create_app
 from agent.llm.document_client import FailoverExtractionClient, RecordedResponseClient
+from agent.packs.immigration.pipeline import SPECIMENS_DIR
+
+
+def _specimen_upload_files():
+    return {
+        "i94": ("i94.png", (SPECIMENS_DIR / "i94.png").read_bytes(), "image/png"),
+        "i797": ("i797.png", (SPECIMENS_DIR / "i797.png").read_bytes(), "image/png"),
+        "passport": ("passport.png", (SPECIMENS_DIR / "passport.png").read_bytes(), "image/png"),
+    }
 
 
 class DeniedBedrockClient:
@@ -30,11 +39,17 @@ class LiveOkClient:
         return self._recorded.converse(**kwargs)
 
 
+def _reference_id_request(document_name: str) -> dict:
+    # extract.py (R1) sends the reference id in the prompt text, not a
+    # `document` block name — the recorded client's matcher looks there.
+    return {"messages": [{"role": "user", "content": [{"text": f"...reference id: '{document_name}'..."}]}]}
+
+
 def test_failover_client_falls_back_once_and_reports_why():
     client = FailoverExtractionClient(DeniedBedrockClient())
     assert client.mode == "live"  # credentials present: intent is live, not yet proven
 
-    request = {"messages": [{"role": "user", "content": [{"document": {"name": "i94"}}]}]}
+    request = _reference_id_request("i94")
     response = client.converse(**request)
 
     assert "content" in response["output"]["message"]
@@ -47,7 +62,7 @@ def test_failover_client_falls_back_once_and_reports_why():
 
 def test_failover_client_stays_live_when_live_works():
     client = FailoverExtractionClient(LiveOkClient())
-    client.converse(messages=[{"role": "user", "content": [{"document": {"name": "i94"}}]}])
+    client.converse(**_reference_id_request("i94"))
     assert client.mode == "live"
     assert client.fallback_reason is None
 
@@ -58,22 +73,16 @@ def test_failover_client_without_credentials_is_recorded_from_the_start():
     assert "no AWS credentials" in client.fallback_reason
 
 
-def test_sample_case_endpoints_degrade_to_recorded_when_bedrock_is_denied(tmp_path):
+def test_upload_flow_degrades_to_recorded_when_bedrock_is_denied(tmp_path):
     client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), extraction_client=DeniedBedrockClient()))
 
-    fields = client.get("/api/sample-case")
-    assert fields.status_code == 200
-    body = fields.json()
-    assert body["mode"] == "recorded"
-    assert "Error 002" in body["mode_reason"]
-    assert body["fields"]["admit_until"] == "2026-11-03"
-    assert body["needs_review"] is False
-
-    processed = client.post("/api/process-sample-case")
+    processed = client.post("/api/process-documents", files=_specimen_upload_files())
     assert processed.status_code == 200
     body = processed.json()
     assert body["mode"] == "recorded"
     assert "Error 002" in body["mode_reason"]
+    assert body["fields"]["admit_until"] == "2026-11-03"
+    assert body["needs_review"] is False
     assert body["error"] is None
     assert body["alert"]["decision"] == "surfaced"
     assert "55" in body["draft"]["body"]
@@ -82,26 +91,54 @@ def test_sample_case_endpoints_degrade_to_recorded_when_bedrock_is_denied(tmp_pa
 
 def test_recorded_mode_is_never_reported_as_live_after_a_fallback(tmp_path):
     client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), extraction_client=DeniedBedrockClient()))
-    first = client.get("/api/sample-case").json()
-    second = client.get("/api/sample-case").json()
+    first = client.post("/api/process-documents", files=_specimen_upload_files()).json()
+    second = client.post("/api/process-documents", files=_specimen_upload_files()).json()
     assert first["mode"] == second["mode"] == "recorded"
 
 
-def test_unexpected_server_errors_are_json_not_text(tmp_path):
-    class Exploding:
-        def converse(self, **kwargs):
-            raise RuntimeError("boom")
+def test_unexpected_server_errors_are_json_not_text(tmp_path, monkeypatch):
+    # R3 already turns a Converse failure into a controlled needs_review
+    # result (see test_partial_live_failure... below and test_extraction.py),
+    # so this exercises the invariant one layer up: a genuinely unexpected
+    # exception anywhere else in the request (here, the ledger write) must
+    # still surface as JSON, never a bare-text 500.
+    from agent.engine.store import Store
 
-    class ExplodingRecorded(RecordedResponseClient):
-        def converse(self, **kwargs):
-            raise RuntimeError("fixture missing")
+    def _boom(self, *args, **kwargs):
+        raise RuntimeError("ledger unavailable")
 
-    failover = FailoverExtractionClient(Exploding(), recorded_client=ExplodingRecorded())
-    app = create_app(db_path=str(tmp_path / "demo.db"), extraction_client=failover)
+    monkeypatch.setattr(Store, "save_event", _boom)
+
+    app = create_app(db_path=str(tmp_path / "demo.db"))
     client = TestClient(app, raise_server_exceptions=False)
 
-    response = client.get("/api/sample-case")
+    response = client.post("/api/process-documents", files=_specimen_upload_files())
 
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("application/json")
-    assert "fixture missing" in response.json()["error"]
+    assert "ledger unavailable" in response.json()["error"]
+
+
+def test_partial_live_failure_mid_batch_returns_a_controlled_error_not_a_mixed_result(tmp_path):
+    # A client that succeeds live on the first document then fails on the
+    # second must not produce a result mixing a genuine live field with
+    # recorded ones under a single "recorded" label.
+    class FailsAfterFirstCall:
+        calls = 0
+
+        def converse(self, **kwargs):
+            FailsAfterFirstCall.calls += 1
+            if FailsAfterFirstCall.calls == 1:
+                return RecordedResponseClient().converse(**kwargs)
+            raise RuntimeError("simulated mid-batch failure")
+
+    client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), extraction_client=FailsAfterFirstCall()))
+
+    response = client.post("/api/process-documents", files=_specimen_upload_files())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["needs_review"] is True
+    assert body["alert"] is None
+    assert body["draft"] is None
+    assert "partway through" in body["error"]

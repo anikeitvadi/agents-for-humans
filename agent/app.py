@@ -7,26 +7,29 @@ without changing any of this logic.
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from strands.models import Model
 
 from agent.config import BEDROCK_MODEL_ID, RULE_VERSION
 from agent.engine.decision_gate import GateInputs, evaluate_gate
-from agent.engine.store import Store
+from agent.engine.store import ResetEpochMismatch, Store
 from agent.llm.document_client import FailoverExtractionClient, build_extraction_client
 from agent.llm.draft import build_bedrock_agent
 from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names
 from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll
-from agent.packs.immigration.pipeline import extract_sample_case_fields, run_sample_case
+from agent.packs.immigration.pipeline import SPECIMENS_DIR, run_case_from_documents
 from agent.packs.recalls.feed import get_recall_item
 from agent.packs.recalls.pipeline import run_recall_check
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RECALLS_FIXTURES_DIR = REPO_ROOT / "fixtures" / "recalls"
 
+IMMIGRATION_CLOCK_ID = "immigration-demo-user"
+_SAMPLE_DOCUMENT_KEYS = {"i94", "i797", "passport"}
 
 APPROVE_ACTION = "approve_for_attorney_review"
 
@@ -43,8 +46,18 @@ class BulletinPollRequest(BaseModel):
     month: str  # "2025-09" or "2025-10" — which captured bulletin month to simulate polling
 
 
+class SubmissionRef(BaseModel):
+    clock_id: str
+    event_id: str
+    rule_version: str
+
+
 class AskRequest(BaseModel):
     question: str  # free text for the guardian agent (agent/llm/guardian.py)
+    # The {clock_id, event_id, rule_version} from a prior /api/process-documents
+    # response, so check_uploaded_case can discuss that specific case instead
+    # of only the bundled sample. Omit if no case has been uploaded yet.
+    submission_ref: SubmissionRef | None = None
 
 
 class ApproveDraftRequest(BaseModel):
@@ -87,21 +100,30 @@ def create_app(
     # fetched-or-fallback recall is resolved once at startup, not per
     # request, and its mode is surfaced in every response (C4).
     recall_item, recall_mode = get_recall_item(attempt_live=attempt_live_recall_feed)
-    # The conversational front door: a Strands Agent whose only tools are
-    # the engine's checks, bound to this app's store and clients. Tests
-    # inject a scripted model; the real app uses Bedrock when credentials
-    # exist and otherwise reports the agent as unavailable.
-    guardian_tools = build_guardian_tools(
-        store,
-        extraction_client=extraction_client,
-        extraction_mode=extraction_mode,
-        model_id=BEDROCK_MODEL_ID,
-        recall_item=recall_item,
-        recall_mode=recall_mode,
-        receipts_loader=_load_receipts,
-        prior_bulletin_months=_PRIOR_BULLETIN_MONTH,
-        draft_agent=bedrock_agent,
-    )
+
+    def _build_guardian_tools(current_submission_ref: dict[str, str] | None = None) -> list:
+        # The conversational front door: a Strands Agent whose only tools are
+        # the engine's checks, bound to this app's store and clients. Built
+        # fresh per /api/ask call so check_uploaded_case can be bound to that
+        # request's specific submission reference (see agent/llm/guardian.py)
+        # rather than stale server-side "last upload" state.
+        return build_guardian_tools(
+            store,
+            extraction_client=extraction_client,
+            extraction_mode=extraction_mode,
+            model_id=BEDROCK_MODEL_ID,
+            recall_item=recall_item,
+            recall_mode=recall_mode,
+            receipts_loader=_load_receipts,
+            prior_bulletin_months=_PRIOR_BULLETIN_MONTH,
+            draft_agent=bedrock_agent,
+            current_submission_ref=current_submission_ref,
+        )
+
+    # Tool names are identical regardless of the ref (only check_uploaded_case's
+    # *behavior* depends on it), so a single no-ref build is enough for the
+    # tool-listing shown when the guardian model is unavailable.
+    guardian_tools = _build_guardian_tools()
     if guardian_model is None and auto_guardian_model:
         guardian_model = build_guardian_model(BEDROCK_MODEL_ID)
     app = FastAPI(title="Immigration Status Guardian — demo backend")
@@ -127,35 +149,70 @@ def create_app(
         # this message instead of failing silently.
         return JSONResponse(status_code=500, content={"error": f"{type(exc).__name__}: {exc}"})
 
-    @app.get("/api/sample-case")
-    def sample_case():
-        extraction = extract_sample_case_fields(extraction_client, mode=extraction_mode, model_id=BEDROCK_MODEL_ID)
-        return {
-            "mode": extraction.mode,
-            "mode_reason": extraction.mode_reason,
-            "fields": extraction.fields,
-            "evidence": extraction.evidence,
-            "statuses": extraction.statuses,
-            "needs_review": extraction.needs_review,
-        }
+    @app.get("/api/sample-documents/{key}")
+    def sample_document(key: str):
+        """Serves the synthetic I-94/I-797/passport specimen images for
+        download so a user can visibly select/upload them — the upload flow
+        then processes exactly those selected bytes (R2/product feedback)."""
+        if key not in _SAMPLE_DOCUMENT_KEYS:
+            raise HTTPException(status_code=404, detail="unknown sample document")
+        return FileResponse(SPECIMENS_DIR / f"{key}.png", media_type="image/png")
 
-    @app.post("/api/process-sample-case")
-    def process_sample_case():
-        result = run_sample_case(
-            store,
-            clock_id="demo-clock",
-            event_id="demo-event",
-            client=extraction_client,
-            mode=extraction_mode,
-            model_id=BEDROCK_MODEL_ID,
-            agent=bedrock_agent,
-        )
+    @app.post("/api/process-documents")
+    async def process_documents(i94: UploadFile, i797: UploadFile, passport: UploadFile):
+        """Runs the real extraction path against the caller's actually-
+        selected upload bytes, once, and returns evidence, the discrepancy
+        decision, and the attorney draft from that single pass (R2) — never
+        a second, independent extraction.
+
+        The synchronous pipeline (Bedrock/Strands calls, SQLite writes) is
+        offloaded to the threadpool (F4): this is an async handler only to
+        `await` the upload reads, so a slow extraction never blocks other
+        requests on the event loop. The epoch is captured before that slow
+        work starts so a reset that happens while this request is in flight
+        aborts it instead of letting it recreate rows just after the reset
+        cleared them (see Store.reset/ResetEpochMismatch).
+        """
+        documents = {"i94": await i94.read(), "i797": await i797.read(), "passport": await passport.read()}
+        epoch = store.current_epoch()
+        try:
+            result = await run_in_threadpool(
+                run_case_from_documents,
+                store,
+                clock_id=IMMIGRATION_CLOCK_ID,
+                client=extraction_client,
+                mode=extraction_mode,
+                model_id=BEDROCK_MODEL_ID,
+                documents=documents,
+                agent=bedrock_agent,
+                expected_epoch=epoch,
+            )
+        except ResetEpochMismatch:
+            return {
+                "mode": extraction_mode,
+                "mode_reason": None,
+                "fields": {},
+                "evidence": {},
+                "statuses": {},
+                "needs_review": True,
+                "error": "The demo was reset while this upload was still processing. Please upload and process again.",
+                "alert": None,
+                "draft": None,
+            }
+        draft = None
+        if result.ref is not None:
+            draft = draft_payload(result.draft, result.ref["clock_id"], result.ref["event_id"], result.ref["rule_version"], "attorney_review")
         return {
             "mode": result.extraction.mode,
             "mode_reason": result.extraction.mode_reason,
+            "fields": result.extraction.fields,
+            "evidence": result.extraction.evidence,
+            "statuses": result.extraction.statuses,
+            "needs_review": result.extraction.needs_review,
             "error": result.error,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
-            "draft": draft_payload(result.draft, "demo-clock", "demo-event", RULE_VERSION, "attorney_review"),
+            "draft": draft,
+            "ref": result.ref,
         }
 
     @app.get("/api/gate-demo")
@@ -165,7 +222,7 @@ def create_app(
         scenarios = [
             {"label": "discrepancy found", "material": True, "actionable": True, "window_open": True},
             {"label": "no discrepancy", "material": False, "actionable": False, "window_open": False},
-            {"label": "recall, no matching receipt", "material": False, "actionable": False, "window_open": False},
+            {"label": "discrepancy already reviewed", "material": True, "actionable": True, "window_open": False},
         ]
         results = []
         for i, s in enumerate(scenarios):
@@ -186,7 +243,9 @@ def create_app(
     def bulletin_poll(req: BulletinPollRequest):
         """Simulates the unattended scheduled poll firing for one captured
         bulletin month (C3) — no user upload involved, same shared engine/
-        gate/persistence/draft path as the discrepancy check."""
+        gate/persistence/draft path as the discrepancy check. This is a
+        separate seeded monitoring example (a different case than whatever
+        was just uploaded above), not derived from the uploaded documents."""
         case = load_seeded_case()
         result = run_bulletin_poll(
             store,
@@ -198,6 +257,7 @@ def create_app(
         )
         return {
             "case_name": case.case_name,
+            "priority_date": case.priority_date,
             "error": result.error,
             "cutoff_status": result.cutoff.status if result.cutoff else None,
             "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
@@ -228,7 +288,9 @@ def create_app(
 
     @app.post("/api/reset")
     def reset_demo():
-        """Demo control: clear the ledger so the sample case surfaces again."""
+        """Demo control: clear the ledger so the sample case surfaces again.
+        Bumps the store's epoch first, so any upload still processing when
+        this runs aborts instead of writing its result back afterward."""
         store.reset()
         return {"reset": True}
 
@@ -257,7 +319,9 @@ def create_app(
     @app.post("/api/ask")
     def ask(req: AskRequest):
         """One question, one fresh Strands agent run; the answer can only
-        come from tool results (see agent/llm/guardian.py)."""
+        come from tool results (see agent/llm/guardian.py). If a submission
+        reference is supplied, check_uploaded_case can discuss that specific
+        upload instead of only the bundled sample."""
         names = tool_names(guardian_tools)
         if guardian_model is None:
             return {
@@ -268,14 +332,16 @@ def create_app(
                 "tools": names,
                 "error": "The guardian agent needs a Bedrock model: configure AWS credentials with model access.",
             }
-        result = ask_guardian(guardian_model, guardian_tools, req.question)
+        ref = req.submission_ref.model_dump() if req.submission_ref else None
+        tools = _build_guardian_tools(current_submission_ref=ref)
+        result = ask_guardian(guardian_model, tools, req.question)
         return {
             "available": True,
             "question": req.question,
             "answer": result.answer,
             "tools_called": result.tools_called,
             "trace": result.trace_dicts(),
-            "tools": names,
+            "tools": tool_names(tools),
             "error": result.error,
         }
 

@@ -10,11 +10,11 @@ If you live in the US on a visa, your stay runs on dates from agencies that don'
 git clone https://github.com/anikeitvadi/agents-for-humans.git && cd agents-for-humans
 python -m venv .venv && source .venv/bin/activate        # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                                                    # 139 offline tests, no AWS needed
+pytest                                                    # 180 offline tests, no AWS needed
 uvicorn agent.app:app --reload                            # http://127.0.0.1:8000/
 ```
 
-Open the page, expand **Demo controls**, click **Load sample case**. Then click it again (silent), **Replay September update** (silent), **Replay October update** (one ping). Or open `http://127.0.0.1:8000/?demo=full` to watch it run. No AWS credentials needed: without them extraction replays the recorded Bedrock response and says so on screen.
+Open the page and click **Load bundled sample & process** — this downloads the three synthetic specimen images and sends them through the real upload endpoint, exactly as if you'd selected your own files with **Choose File** (there is no canned/simulated path). Then process again (silent, draft kept), **Replay September update** (silent), **Replay October update** (one ping). Or open `http://127.0.0.1:8000/?demo=full` to watch it run. No AWS credentials needed: without them extraction replays a recorded response verified against the known specimen bytes, and says so on screen.
 
 ## Screenshots
 
@@ -26,7 +26,7 @@ Open the page, expand **Demo controls**, click **Load sample case**. Then click 
 
 Flags a **document-date discrepancy** between a person's I-94 and I-797 (a common H-1B situation: CBP admits someone only until their passport expiry, which can be much earlier than what their approval notice says) and drafts a message for their attorney to review. It never states a lawful-status length, an unlawful-presence conclusion, or a filing recommendation — every output is framed as a flag for attorney review, not legal advice.
 
-A second, deliberately thin pack (`agent/packs/recalls/`) matches a live consumer-recall feed to a receipt, proving the same watch → evaluate → gate → surface engine works on an unrelated domain. It is demo-scope (exact match against one seeded receipt), not a general-purpose matcher — see "Known scope limits" below.
+A second, deliberately thin pack (`agent/packs/recalls/`) matches a live consumer-recall feed to a receipt, proving the same watch → evaluate → gate → surface engine works on an unrelated domain. It is demo-scope (exact match against one seeded receipt), not a general-purpose matcher — see "Known scope limits" below. Its backend, pipeline, and tests are fully present and exercised (`agent/packs/recalls/`, `tests/test_recall_pipeline.py`, `tests/test_recalls_rules.py`), but it is not surfaced in the primary UI, which tells one connected immigration story end to end (upload → review → attorney draft → ask the guardian → bulletin watch).
 ## Who it's for
 
 H-1B holders and their attorneys, and international students/workers generally, whose status depends on documents issued by different agencies (CBP, USCIS) on different clocks that can silently disagree.
@@ -58,28 +58,39 @@ agent/
             agent: a Strands Agent whose only tools are the engine's checks)
   packs/
     immigration/  rules.py (I-94/I-797 date-gap check; bulletin-cutoff check
-                  requiring the USCIS-designated chart), pipeline.py (sample
-                  case end to end), bulletin.py (unattended monthly poll)
+                  requiring the USCIS-designated chart, with malformed-source
+                  validation), pipeline.py (real document-upload extraction,
+                  bound to a derived immutable identity), bulletin.py
+                  (unattended monthly poll)
     recalls/      rules.py (exact manufacturer+product match, demo-scope),
                   feed.py (live CPSC API, captured fallback), pipeline.py
   app.py    FastAPI backend serving the API + the static UI
-ui/index.html   static demo UI: "Case review" and "Recall demo" tabs, plus
-                demo controls that simulate an upload or a scheduled poll
-fixtures/sample_case/   three synthetic specimen images + a recorded extraction
+ui/index.html   single-story demo UI: upload real documents, review the
+                discrepancy, approve the attorney draft, ask the guardian
+                about the uploaded case, then watch a bulletin replay
+fixtures/sample_case/   three synthetic specimen images + a recorded extraction,
+                        byte-verified against uploads in recorded mode
 fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
                         chart designation, one seeded case (see its README)
 fixtures/recalls/       one seeded receipt + a captured real CPSC recall
 deploy/   agentcore_entrypoint.py — AgentCore Runtime entrypoint (deployed)
-tests/    139 offline tests (rules, extraction, decision gate, bulletin poll,
-          recall pipeline, guardian agent + trace, Bedrock-denied fallback,
-          approval receipts, Runtime entrypoint) + 4 opt-in live
+tests/    180 offline tests (rules, extraction, decision gate, bulletin poll,
+          recall pipeline, guardian agent + trace + uploaded-case binding,
+          Bedrock-denied fallback, approval receipts, upload identity/
+          isolation, PNG validation, concurrency/reset-epoch, Runtime
+          entrypoint) + 5 opt-in live tests, all verified against real
+          Bedrock (see Evidence below)
 ```
 
 **The rules engine is deterministic Python, not an LLM judgment call.** The model is only ever called for two things: extracting fields from a document, and writing the plain-English wrapper around a rules-engine result it cannot alter. See `docs/architecture-spec.md` §4.2 for why this boundary is enforced in code rather than in a prompt.
 
-**The guardian agent** (`agent/llm/guardian.py`) is the conversational front door, in the UI ("Ask the guardian"), at `POST /api/ask`, and as the `{"prompt": ...}` payload on the AgentCore Runtime. It is a Strands Agent with four tools, each a thin wrapper over a pack function bound to the same ledger the UI uses: `check_document_dates`, `run_sample_case_check`, `check_visa_bulletin`, `check_recall`. Its system prompt forbids computing dates or stating status itself; it can only call a tool and report the result, and every answer lists the tools it called. A fresh agent runs per question, so requests are stateless. Tests drive the real Strands tool loop with a scripted model (`tests/scripted_model.py`), so none of this depends on Bedrock being reachable.
+**The guardian agent** (`agent/llm/guardian.py`) is the conversational front door, in the UI ("Ask the guardian"), at `POST /api/ask`, and as the `{"prompt": ...}` payload on the AgentCore Runtime. It is a Strands Agent with five tools, each a thin wrapper over a pack function bound to the same ledger the UI uses: `check_document_dates`, `run_sample_case_check` (the bundled demo sample only), `check_uploaded_case` (the specific case the person just uploaded, bound to an explicit submission reference from that upload — never a silent rerun of the bundled sample), `check_visa_bulletin`, `check_recall`. Its system prompt forbids computing dates or stating status itself; it can only call a tool and report the result, and every answer lists the tools it called. A fresh agent runs per question, so requests are stateless. Tests drive the real Strands tool loop with a scripted model (`tests/scripted_model.py`), so none of this depends on Bedrock being reachable — and the same paths are also verified against live Bedrock (see Evidence).
 
-**Failure is visible, never silent.** Credentials are not proof that Bedrock works. The extraction client tries live Bedrock and, on the first API failure, falls back to the recorded replay for the life of the process (`FailoverExtractionClient`). Every response carries `mode` (`live` or `recorded`) and, after a fallback, `mode_reason` with the real error, and the UI shows both. The web app returns JSON on every error, and the UI's single fetch helper turns non-2xx, non-JSON, timeout, and network failures into a visible banner.
+**Every uploaded case has its own immutable identity.** `run_case_from_documents` (`agent/packs/immigration/pipeline.py`) derives its ledger key from the *complete* extraction result — fields, evidence, statuses, mode, and a sha256 of each uploaded document — not from the extracted dates alone or a fixed placeholder id. Two different document sets that happen to extract the same dates get distinct identities; replaying the exact same documents deterministically retrieves the same draft and approval. The guardian, the approval endpoint, and the UI all read/write through this same derived reference.
+
+**Uploads are validated before any model call.** Every file is decoded (not just magic-byte checked) to confirm it is a real, uncorrupted PNG; a truncated file with a valid PNG signature is rejected. In recorded mode, each uploaded file's bytes must match a known bundled specimen (by hash) before the recorded response is trusted — an arbitrary or swapped file never gets treated as the known sample.
+
+**Failure is visible, never silent.** Credentials are not proof that Bedrock works. The extraction client tries live Bedrock and, on the first API failure, falls back to the recorded replay for the life of the process (`FailoverExtractionClient`); if it fails over *partway* through a batch, the result is refused rather than silently mixing a live field with recorded ones. Every response carries `mode` (`live` or `recorded`) and, after a fallback, `mode_reason` with the real error, and the UI shows both. The upload endpoint offloads the (potentially slow) extraction/model work to a threadpool so it never blocks other requests, and a reset that happens mid-upload aborts that upload instead of letting it write a result afterward. The web app returns JSON on every error, and the UI's single fetch helper (with explicit multipart support for uploads) turns non-2xx, non-JSON, timeout, and network failures into a visible banner.
 
 **The decision trace.** Every guardian answer ships with structured execution facts read straight from the Strands message history: for each tool call, the tool, its input, the result status, the data mode, the deterministic gate decision and reason, and whether a draft was persisted. Never model reasoning.
 
@@ -89,10 +100,13 @@ tests/    139 offline tests (rules, extraction, decision gate, bulletin poll,
 ## Known scope limits (by design, for this deadline)
 
 - **No lawful-status, F-1/OPT, or unlawful-presence computation.** That domain logic (INA §212(a)(9)(B) bars, status-length math) is deferred to a later iteration — see `HANDOFF.md`. This build only compares two document dates arithmetically.
-- **Recall matching is demo-scope**: exact manufacturer+product match against one seeded receipt, not a general fuzzy matcher. Labeled as such in the UI and here so a judge testing their own receipt doesn't mistake it for general-purpose.
-- **Sample case only, no real document uploads** in the live demo — `fixtures/sample_case/specimens/` holds three synthetic images (invented identity and dates in the real I-94/I-797/passport format) and `recorded_extraction_response.json` is what Bedrock returned for them, so nobody uploads real immigration documents to a hackathon URL. With AWS credentials the same specimens go through live Bedrock extraction.
+- **Recall matching is demo-scope**: exact manufacturer+product match against one seeded receipt, not a general fuzzy matcher. The recall pack's backend/tests are real and exercised, but it's not surfaced in the primary UI (see "How it works").
+- **The demo only ever uploads synthetic specimens**, not real immigration documents — `fixtures/sample_case/specimens/` holds three synthetic images (invented identity and dates in the real I-94/I-797/passport format) and `recorded_extraction_response.json` is what Bedrock returned for them. The upload flow itself is real (your selected file's bytes are what get sent and extracted, not a canned replay); the specimens are what a judge should select so nobody uploads real immigration documents to a hackathon URL. With AWS credentials the same specimens go through live Bedrock extraction end to end (see Evidence).
+- **PNG only** for this build — the upload accepts and validates PNG images; JPEG/other formats are rejected with a controlled error rather than silently mis-labeled.
 - **The bulletin beat is a historical replay, not a live fetch.** travel.state.gov blocks automated fetching, so the September and October 2025 bulletins are captured fixtures; their provenance and corroborating sources are in `fixtures/bulletins/README.md`.
 ## AgentCore Runtime (deployed)
+
+**This deployment predates the upload-flow reconciliation below and has not been redeployed with it.** It reflects the sample-case-only code as it stood when deployed; `run_sample_case`'s signature and the guardian's tool set have since changed. Redeploying (`agentcore deploy`) with the current code is still outstanding — see HANDOFF.md.
 
 The same pipeline runs on Amazon Bedrock AgentCore Runtime through `deploy/agentcore_entrypoint.py`, with no engine or pack logic changed. Deployed 2026-09-11 as a direct code deploy (no container), observability on (CloudWatch logs and X-Ray traces), memory off:
 
@@ -116,20 +130,51 @@ agentcore invoke '{}'
 Notes: the toolkit resolves dependencies from the root `requirements.txt`, which exists only for that purpose. AWS now recommends the Node CLI (`npm install -g @aws/agentcore`); the Python toolkit still deploys. Draft personalization needs Bedrock model access on the account; without it the response carries `used_llm_personalization: false` and the deterministic core ships alone.
 ## Evidence
 
-Everything below was produced on 2026-09-11. Nothing here implies Bedrock-live behavior: model access on the demo AWS account was blocked that day ("Error 002", a payment-verification hold with an open support case), so extraction ran in **recorded** mode, drafts used the deterministic core, and the guardian agent returned that error rather than an answer. The fallback path is what is shown.
+**Live Bedrock, verified 2026-09-11 (after Anthropic's model use-case form cleared for the AWS account).** All three of the model-dependent pieces — document extraction (vision), the guardian agent, and draft personalization — were confirmed end to end against real Bedrock, not just the recorded fallback:
 
 **Offline test suite** (`pytest -q`, no AWS credentials):
 
 ```
-139 passed, 4 deselected in 1.5s
+180 passed, 5 deselected
 ```
 
-The 4 deselected tests are opt-in live tests (`pytest -m live`); 3 of them fail with Error 002 while the account is blocked and 1 (live CPSC) passes.
-
-**Bedrock-denied fallback, on a machine with credentials** (`GET /api/sample-case`, real server):
+**Live test suite** (`pytest -m live -q`, real AWS credentials + Bedrock model access):
 
 ```
-http 200  mode=recorded  needs_review=False
+5 passed
+```
+
+Combined (`pytest -q -m ''`): **185 passed**.
+
+**Real upload through `POST /api/process-documents`, live mode** (abbreviated):
+
+```json
+{
+  "mode": "live", "mode_reason": null,
+  "fields": {"admit_until": "2026-11-03", "i797_valid_until": "2026-12-28", "passport_expiry": "2026-11-03"},
+  "evidence": {"admit_until": "11/03/2026", "i797_valid_until": "12/28/2026", "passport_expiry": "03 NOV 2026"},
+  "needs_review": false,
+  "alert": {"decision": "surfaced", "reason": "passed materiality, actionability, window, novelty"},
+  "draft": {"used_llm_personalization": true, "subject": "Document review needed: Sample Case — H-1B, I-94 cut to passport expiry", ...}
+}
+```
+
+Note the model reads each date in the document's own printed format (`evidence`) but the prompt asks it to normalize `value` to ISO 8601 — this exact live response is what caught and fixed two real bugs during verification: the model wraps JSON in a markdown code fence (now stripped before parsing), and without an explicit normalization instruction it returns non-ISO dates that R3's validation would otherwise always flag as `ambiguous` (see `agent/llm/extract.py`).
+
+**Guardian agent, `POST /api/ask`, live mode**, asked about the specific uploaded case above (not the bundled sample):
+
+```json
+{
+  "tools_called": ["check_uploaded_case"],
+  "trace": [{"tool": "check_uploaded_case", "status": "success", "mode": "live", "decision": "surfaced", "persisted_draft": true}],
+  "answer": "The uploaded case shows one issue that needs your review. ... disagree by 55 days ..."
+}
+```
+
+**Bedrock-denied fallback still works** (regression, credentials present but access denied — `tests/test_bedrock_denied_fallback.py`):
+
+```
+mode=recorded  needs_review=False
 mode_reason=live Bedrock extraction unavailable (ValidationException: Error 002: Access to Bedrock models is not allowed for this account); replaying the recorded response
 ```
 
@@ -169,7 +214,7 @@ Direct code deploy, memory off, CloudWatch logs and X-Ray traces on. The `{"prom
 }
 ```
 
-**Browser verification** (Chrome, 2026-09-11): load sample case, repeat (silent, draft kept), decision gate, September (silent), October (surfaced), open draft, approve (receipt shown, activity row added), guardian question (error state shown, not silent), recall tab (live CPSC match, unmatched silent), reset. No console errors.
+**Browser verification** (Chrome, 2026-09-11): load bundled sample & process (real upload through the actual endpoint), reprocess (silent, draft kept), open draft, approve (receipt shown, activity row added), close, ask the guardian about the uploaded case (live, correct decision trace), decision gate, reset (clean empty state). No console errors. The recall pack is backend-only now (see "How it works"), so it is not part of this UI click-through.
 
 ## Production path (not built for this deadline)
 
@@ -181,8 +226,8 @@ Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS crede
 ```bash
 python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                             # 139 offline tests, no AWS credentials required
-pytest -m live                     # 4 live tests: need Bedrock access and network
+pytest                             # 180 offline tests, no AWS credentials required
+pytest -m live                     # 5 live tests: need Bedrock model access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```
 ## Pre-existing code

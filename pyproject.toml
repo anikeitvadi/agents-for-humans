@@ -11,12 +11,13 @@ dependencies = [
     "uvicorn[standard]",
     "pydantic>=2",
     "httpx",
+    "python-multipart",  # required by FastAPI's UploadFile (multipart/form-data uploads)
+    "pillow",  # decodes/verifies uploaded images before any model call (F3); also used by fixtures/sample_case/generate_specimens.py
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pillow",  # fixtures/sample_case/generate_specimens.py only; not imported by agent/ at runtime
 ]
 deploy = [
     "bedrock-agentcore",
