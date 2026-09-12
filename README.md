@@ -16,11 +16,11 @@ pytest                                                    # 180 offline tests, n
 uvicorn agent.app:app --reload                            # http://127.0.0.1:8000/
 ```
 
-Open the page and click **Load bundled sample & process** — this downloads the three synthetic specimen images and sends them through the real upload endpoint, exactly as if you'd selected your own files with **Choose File** (there is no canned/simulated path). Then process again (silent, draft kept), **Replay September update** (silent), **Replay October update** (one ping). Or open `http://127.0.0.1:8000/?demo=full` to watch it run. No AWS credentials needed: without them extraction replays a recorded response verified against the known specimen bytes, and says so on screen.
+Open the page and click **Run the sample case** in the opening screen (or **Load bundled sample & process** in the upload section) — this downloads the three synthetic specimen images and sends them through the real upload endpoint, exactly as if you'd selected your own files with **Choose File** (there is no canned/simulated path). Then process again (silent, draft kept), **Replay September update** (silent), **Replay October update** (one ping). Or open `http://127.0.0.1:8000/?demo=full` to watch it run. No AWS credentials needed: without them extraction replays a recorded response verified against the known specimen bytes, and says so on screen.
 
 ## Screenshots
 
-| Upload → review, after the full guided demo | The attorney draft, with approval |
+| The review section, after the full guided demo | The attorney draft, with approval |
 |---|---|
 | ![Case review](docs/screenshots/case-review.png) | ![Attorney draft](docs/screenshots/attorney-draft.png) |
 

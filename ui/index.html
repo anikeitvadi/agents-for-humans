@@ -3,376 +3,695 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>Immigration Status Guardian</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/lucide@1.44.0/dist/umd/lucide.min.js" defer></script>
 <style>
+  /* ------------------------------------------------------------------
+     Visual system: editorial, calm, framed. Four section themes, each
+     declaring every color token it uses, so a section can change its
+     atmosphere (paper -> slate when the review loads) with one class.
+     No webfonts, no icon library, no animation library: the page is
+     complete offline and every motion is CSS or the native Web
+     Animations API.
+     ------------------------------------------------------------------ */
   :root {
-    --bg: #10151B;
-    --surface: #171E27;
-    --surface-raised: #202A35;
-    --ink: #E7EDF3;
-    --ink-2: #A7B3BF;
-    --ink-3: #6B7785;
-    --rule: #29333F;
-    --accent: #58BFA9;
-    --accent-wash: rgba(88, 191, 169, 0.14);
-    --review: #D8B16A;
-    --review-wash: rgba(216, 177, 106, 0.14);
-    --mono: "IBM Plex Mono", ui-monospace, monospace;
-    --sans: "IBM Plex Sans", -apple-system, sans-serif;
+    --charcoal: #1B1C1A;
+    --soft-black: #111210;
+    --limestone: #E5E3D8;
+    --paper: #F2F0E8;
+    --sage: #82908B;
+    --sage-light: #A9B5B0;
+    --slate: #53615F;
+    --gold: #B89A6A;
+    --gold-light: #D4BA85;
+    --gold-ink: #6B5530;
+    --ink: #20211E;
+    --ink-light: #F5F3EA;
+    --serif: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+    --sans: Inter, "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+    --radius: 6px;
+    --frame-w: min(1240px, 100% - 48px);
+    --masthead-h: 60px;
+    --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   }
+  .theme-limestone, .theme-paper {
+    color: var(--ink);
+    --muted: #5B5C57;
+    --hair: rgba(32, 33, 30, 0.16);
+    --hair-strong: rgba(32, 33, 30, 0.34);
+    --surface: rgba(32, 33, 30, 0.035);
+    --accent: var(--gold);
+    --accent-text: var(--gold-ink);
+    --accent-wash: rgba(184, 154, 106, 0.16);
+    --quiet: var(--sage);
+    --quiet-text: var(--slate);
+    --quiet-wash: rgba(130, 144, 139, 0.16);
+    --btn-fill: var(--charcoal);
+    --btn-ink: var(--ink-light);
+  }
+  .theme-limestone { background: var(--limestone); --section-bg: var(--limestone); }
+  .theme-paper { background: var(--paper); --section-bg: var(--paper); }
+  .theme-slate, .theme-charcoal {
+    color: var(--ink-light);
+    --muted: rgba(245, 243, 234, 0.78);
+    --hair: rgba(245, 243, 234, 0.18);
+    --hair-strong: rgba(245, 243, 234, 0.36);
+    --surface: rgba(245, 243, 234, 0.05);
+    --accent: var(--gold-light);
+    --accent-text: var(--ink-light);
+    --accent-wash: rgba(212, 186, 133, 0.14);
+    --quiet: var(--sage-light);
+    --quiet-text: var(--ink-light);
+    --quiet-wash: rgba(169, 181, 176, 0.12);
+    --btn-fill: var(--paper);
+    --btn-ink: var(--ink);
+  }
+  .theme-slate { background: var(--slate); --section-bg: var(--slate); }
+  .theme-charcoal { background: var(--charcoal); --section-bg: var(--charcoal); }
+
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--limestone); color: var(--ink); font: 16px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   .hidden { display: none !important; }
-  .send-row { margin: 0 0 10px; }
-  .ask-history { margin-top: 10px; }
-  .ask-turn { border-top: 1px solid var(--rule); padding: 8px 0; font-size: 13px; }
-  .ask-turn-q { color: var(--ink-3); }
-  .ask-turn-a { color: var(--ink-2); white-space: pre-wrap; margin-top: 2px; }
-  .send-row .ask-input { display: block; width: 100%; }
-  .public-notice { font-size: 12.5px; color: var(--ink); border-left: 2px solid var(--accent); padding: 2px 0 2px 10px; margin: 0 0 14px; max-width: 70ch; }
-  .scenario-picker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); margin-right: 8px; }
-  .scenario-picker select { font: 500 13px var(--sans); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--rule);
-    background: var(--surface); color: var(--ink); max-width: 46ch; }
-  .scenario-desc { font-size: 12.5px; color: var(--ink-3); margin: 8px 0 0; max-width: 62ch; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .shell { max-width: 980px; margin: 0 auto; padding: 28px 20px 72px; }
+  :focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+  button, input, select { font-family: inherit; }
+  a { color: inherit; }
+  h1, h2, h3, p { margin: 0; }
 
-  /* Header */
-  .top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px;
-    padding-bottom: 14px; margin-bottom: 6px; border-bottom: 1px solid var(--rule); }
-  .top-identity { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .product-name { font-size: 15px; font-weight: 600; }
-  .top-meta { font-size: 13px; color: var(--ink-3); }
+  .frame { width: var(--frame-w); margin: 0 auto; }
+  .frame.lined { border-left: 1px solid var(--hair); border-right: 1px solid var(--hair); }
 
-  .error-banner { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0 0; padding: 10px 14px; border-radius: 6px;
-    border: 1px solid var(--review); background: var(--review-wash); color: var(--ink); font-size: 13.5px; }
+  /* Type roles */
+  .eyebrow, .act-index, .section-heading, .top-meta, .comparison-label, .activity-status, .trace-heading,
+  .doc-slot-index, .ribbon-label, .masthead-nav a, .activity-detail summary, .process-num {
+    font: 500 11px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .arrow { font-family: var(--sans); }
+
+  /* Buttons: mono, uppercase, quiet radius */
+  .btn { font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 14px 20px;
+    border-radius: var(--radius); border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center;
+    gap: 10px; background: none; color: inherit; text-decoration: none;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, opacity 0.25s ease; }
+  .btn-primary { background: var(--btn-fill); color: var(--btn-ink); border-color: var(--btn-fill); }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-hairline { border-color: var(--hair-strong); }
+  .btn-hairline:hover { border-color: currentColor; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-sm { padding: 9px 12px; font-size: 11px; }
+  .btn-text { font: 500 11px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; background: none;
+    border: none; border-bottom: 1px solid var(--hair-strong); padding: 0 0 1px; color: var(--muted); cursor: pointer; }
+  .btn-text:hover { color: inherit; border-bottom-color: currentColor; }
+  .btn-text:disabled { opacity: 0.4; cursor: not-allowed; }
+  a.btn-text { text-decoration: none; }
+
+  /* Glyphs: small architectural marks in place of an icon library */
+  .glyph { display: inline-block; width: 8px; height: 8px; border: 1px solid currentColor; flex: none; vertical-align: middle; }
+  .glyph-circle-alert { background: var(--accent); border-color: var(--accent); }
+  .glyph-circle-check, .glyph-check-circle { border-radius: 50%; border-color: var(--quiet); }
+  .glyph-mail { width: 11px; height: 8px; border-radius: 1px; }
+  .glyph-file-text { width: 7px; height: 9px; }
+
+  .skip-link { position: absolute; left: 12px; top: -48px; z-index: 50; padding: 10px 14px; background: var(--charcoal);
+    color: var(--ink-light); font: 500 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; border-radius: var(--radius); }
+  .skip-link:focus { top: 12px; }
+
+  /* Masthead */
+  .masthead { position: sticky; top: 0; z-index: 30; height: var(--masthead-h); border-bottom: 1px solid var(--hair); }
+  .masthead-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 100%; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand-mark { width: 12px; height: 12px; border: 1px solid currentColor; position: relative; flex: none; }
+  .brand-mark::after { content: ""; position: absolute; inset: 3px; background: var(--gold); }
+  .brand-name { font: 500 13.5px/1 var(--sans); letter-spacing: -0.01em; white-space: nowrap; }
+  .masthead-nav { display: flex; gap: 28px; }
+  .masthead-nav a { text-decoration: none; transition: color 0.2s ease; }
+  .masthead-nav a:hover { color: inherit; }
+  .masthead-right { display: flex; align-items: center; gap: 18px; min-width: 0; }
+  .top-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42ch; }
+
+  .error-banner { position: fixed; top: calc(var(--masthead-h) + 12px); left: 50%; transform: translateX(-50%);
+    width: var(--frame-w); z-index: 40; display: flex; align-items: flex-start; gap: 16px; padding: 14px 18px;
+    border: 1px solid var(--gold); border-radius: var(--radius); background: var(--charcoal); color: var(--ink-light);
+    font: 13.5px/1.5 var(--sans); box-shadow: 0 8px 24px rgba(17, 18, 16, 0.18); }
   .error-banner-text { flex: 1; white-space: pre-wrap; word-break: break-word; }
-  .error-banner button { font: 500 12.5px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
-    border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+  .error-banner button { font: 500 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; background: none;
+    border: 1px solid rgba(245, 243, 234, 0.36); color: var(--ink-light); border-radius: var(--radius); padding: 7px 10px; cursor: pointer; }
+  .public-notice { font: 12px/1.5 var(--mono); padding: 10px 0; border-bottom: 1px solid var(--hair); }
 
-  .legal-note { font-size: 12.5px; color: var(--ink-3); border-left: 2px solid var(--review); padding: 2px 0 2px 10px;
-    margin: 16px 0 28px; max-width: 62ch; }
+  /* Acts */
+  .act { position: relative; scroll-margin-top: var(--masthead-h); transition: background-color 1.2s ease, color 1.2s ease; }
+  .act-inner { padding: 72px 48px 88px; }
+  .act-head { display: grid; grid-template-columns: 200px 1fr; gap: 24px 40px; align-items: baseline; padding-bottom: 28px;
+    border-bottom: 1px solid var(--hair); margin-bottom: 36px; }
+  .act-title { font: 500 clamp(28px, 3vw, 40px)/1.1 var(--sans); letter-spacing: -0.025em; }
+  .act-desc { grid-column: 2; color: var(--muted); font-size: 15px; max-width: 62ch; }
 
-  .step { margin-bottom: 40px; }
-  .step-heading { display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; }
-  .step-number { font-family: var(--mono); font-size: 12.5px; color: var(--accent); background: var(--accent-wash);
-    border-radius: 999px; padding: 2px 9px; }
-  .step-title { font-size: 17px; font-weight: 600; margin: 0; }
-  .step-desc { color: var(--ink-2); font-size: 14px; max-width: 62ch; margin: 0 0 18px; }
+  /* ACT 1: hero */
+  .hero { position: relative; min-height: calc(86vh - var(--masthead-h)); display: flex; overflow: hidden; isolation: isolate; }
+  .hero-backdrop { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(110% 62% at 50% 104%, rgba(184, 154, 106, 0.46) 0%, rgba(184, 154, 106, 0.14) 38%, rgba(184, 154, 106, 0) 66%),
+      radial-gradient(56% 48% at 16% 6%, rgba(130, 144, 139, 0.30) 0%, rgba(130, 144, 139, 0) 72%),
+      radial-gradient(64% 54% at 86% 14%, rgba(242, 240, 232, 0.95) 0%, rgba(242, 240, 232, 0) 70%),
+      linear-gradient(180deg, #ECEAE0 0%, var(--limestone) 52%, #D9D6C9 100%); }
+  .hero-backdrop::before { content: ""; position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(180deg, rgba(32, 33, 30, 0.05) 0 1px, transparent 1px 28px);
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.35) 100%);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.35) 100%); }
+  .hero-backdrop::after { content: ""; position: absolute; inset: 0; opacity: 0.55; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
+  .hero-horizon { position: absolute; left: 0; right: 0; top: 64%; height: 1px; background: rgba(32, 33, 30, 0.14); z-index: 0; }
+  .hero-frame { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between;
+    padding: 96px 48px 0; gap: 72px; }
+  .hero-copy { max-width: 62rem; }
+  .hero-copy > * { opacity: 0; transform: translateY(12px); animation: rise 1.1s var(--ease-out) forwards; }
+  .hero-copy > :nth-child(1) { animation-delay: 0.05s; }
+  .hero-copy > :nth-child(2) { animation-delay: 0.18s; }
+  .hero-copy > :nth-child(3) { animation-delay: 0.30s; }
+  .hero-copy > :nth-child(4) { animation-delay: 0.46s; }
+  .hero-copy > :nth-child(5) { animation-delay: 0.60s; }
+  .hero-copy > :nth-child(6) { animation-delay: 0.72s; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .hero-serif { font: italic 400 clamp(30px, 3.4vw, 50px)/1.1 var(--serif); letter-spacing: -0.01em; margin: 22px 0 6px; }
+  .hero-headline { font: 500 clamp(40px, 6.2vw, 84px)/1.02 var(--sans); letter-spacing: -0.035em; max-width: 13ch; }
+  .hero-lede { font-size: clamp(16px, 1.3vw, 19px); color: var(--muted); max-width: 52ch; margin: 28px 0 32px; }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .legal-note { font: 12px/1.5 var(--mono); color: var(--muted); max-width: 66ch; margin-top: 28px;
+    padding-left: 12px; border-left: 1px solid var(--gold); }
 
-  /* Upload */
-  .upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
-  @media (max-width: 760px) { .upload-grid { grid-template-columns: 1fr; } }
-  .upload-card { background: var(--surface); border-radius: 8px; padding: 14px 16px; border: 1px solid var(--rule); }
-  .upload-card-title { font-size: 13.5px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
-  .upload-card-title svg { width: 15px; height: 15px; color: var(--ink-3); }
-  .upload-links { display: flex; gap: 12px; font-size: 12.5px; margin-bottom: 10px; }
-  .upload-links a, .upload-links button.btn-link-sm { font-size: 12.5px; color: var(--ink-2); text-decoration: underline;
-    text-underline-offset: 2px; text-decoration-color: var(--rule); background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; }
-  .upload-links a:hover, .upload-links button.btn-link-sm:hover { color: var(--ink); }
-  .upload-links button.btn-link-sm:disabled { opacity: 0.45; cursor: not-allowed; }
-  input[type="file"] { display: block; width: 100%; font-size: 12.5px; color: var(--ink-2); }
-  input[type="file"]::file-selector-button { font: 500 12.5px var(--sans); padding: 5px 10px; border-radius: 6px;
-    border: 1px solid var(--rule); background: var(--surface-raised); color: var(--ink-2); cursor: pointer; margin-right: 8px; }
-  input[type="file"]:disabled { opacity: 0.45; }
-  .upload-preview { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); }
-  .upload-preview img { width: 34px; height: 34px; object-fit: cover; border-radius: 4px; border: 1px solid var(--rule); }
+  .ribbon { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; border-top: 1px solid var(--hair); }
+  .ribbon > * { padding: 22px 24px 26px; border-right: 1px solid var(--hair); min-width: 0; }
+  .ribbon > :first-child { padding-left: 0; }
+  .ribbon > :last-child { border-right: none; }
+  .ribbon-caption { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .ribbon-fine { font-size: 13px; color: var(--muted); max-width: 30ch; }
+  .ribbon-cell { display: flex; flex-direction: column; gap: 6px; }
+  .ribbon-num { font: 400 clamp(34px, 3.4vw, 46px)/1 var(--serif); letter-spacing: -0.02em; }
+  .ribbon-unit { font: italic 400 0.5em var(--serif); margin-left: 0.3em; color: var(--muted); }
 
-  .process-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .btn-primary { font: 600 14px var(--sans); padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent);
-    background: var(--accent); color: #0A1310; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
-  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-  .btn-quiet { font: 500 13px var(--sans); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule);
-    background: var(--surface); color: var(--ink-2); cursor: pointer; }
-  .btn-quiet:hover { color: var(--ink); border-color: var(--ink-3); }
-  .btn-quiet:disabled { opacity: 0.45; cursor: not-allowed; }
-  .btn-link { font: 500 13.5px var(--sans); background: none; border: none; color: var(--ink-2); cursor: pointer;
-    padding: 0; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
-  .btn-link:hover { color: var(--ink); }
-  .process-status { font-size: 13px; color: var(--ink-3); }
-  .spinner { display: inline-block; width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--rule);
-    border-top-color: var(--accent); animation: spin 0.7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  /* ACT 1: upload block */
+  .scenario-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px 40px; align-items: start; margin-bottom: 28px; }
+  .scenario-row > * { min-width: 0; }
+  .scenario-picker { display: flex; flex-direction: column; gap: 8px; grid-column: 1 / -1; }
+  .scenario-picker select { font: 500 12px/1.3 var(--mono); letter-spacing: 0.04em; padding: 10px 12px; border-radius: var(--radius);
+    border: 1px solid var(--hair-strong); background: rgba(255, 255, 255, 0.35); color: inherit; width: 100%; max-width: 56ch; min-width: 0; }
+  .scenario-desc { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); max-width: 70ch; }
+  .scenario-desc:empty { display: none; }
+
+  .doc-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--hair); border-radius: var(--radius); overflow: hidden; }
+  .doc-slot { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .doc-slot + .doc-slot { border-left: 1px solid var(--hair); }
+  .doc-slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .doc-slot-title { font: 500 16px/1.2 var(--sans); letter-spacing: -0.01em; }
+  .doc-slot-hint { font-size: 13px; color: var(--muted); margin-top: -6px; }
+  input[type="file"] { display: block; width: 100%; font: 12px/1.4 var(--mono); color: var(--muted); min-width: 0; }
+  input[type="file"]::file-selector-button { font: 500 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--hair-strong); background: none; color: var(--ink);
+    cursor: pointer; margin-right: 10px; transition: border-color 0.2s ease; }
+  input[type="file"]::file-selector-button:hover { border-color: currentColor; }
+  input[type="file"]:disabled { opacity: 0.4; }
+  .doc-slot-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .upload-preview { display: flex; align-items: center; gap: 10px; font: 12px var(--mono); color: var(--muted);
+    padding-top: 12px; border-top: 1px solid var(--hair); }
+  .upload-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: 3px; border: 1px solid var(--hair-strong); }
+
+  .process-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+  .process-status { font: 12px/1.4 var(--mono); color: var(--muted); }
+  .spinner { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--hair-strong);
+    border-top-color: currentColor; animation: spin 0.9s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .upload-note { font-size: 12.5px; color: var(--ink-3); max-width: 62ch; margin: 10px 0 0; }
+  .mode-note { font: 12px/1.6 var(--mono); color: var(--muted); max-width: 78ch; margin-top: 18px; }
+  .mode-note:empty { display: none; }
+  .mode-note::before { content: "Mode · "; color: var(--ink); }
 
-  /* Review hero */
-  .review-empty { color: var(--ink-2); max-width: 56ch; font-size: 14.5px; }
-  .review-empty strong { color: var(--ink); font-weight: 600; }
+  /* ACT 2: review */
+  .review-empty { padding: 8px 0 24px; max-width: 60ch; }
+  .empty-serif { font: italic 400 clamp(26px, 2.8vw, 38px)/1.15 var(--serif); margin-bottom: 14px; }
+  .empty-copy { color: var(--muted); font-size: 15.5px; }
+  .empty-processing { margin-top: 18px; }
 
-  .status-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
-    padding: 4px 10px 4px 8px; border-radius: 999px; margin-bottom: 14px; }
-  .status-chip svg { width: 13px; height: 13px; }
-  .status-chip.tone-review { background: var(--review-wash); color: var(--review); }
-  .status-chip.tone-quiet { background: var(--accent-wash); color: var(--accent); }
-  .status-chip.tone-routine { background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .status-chip { display: inline-flex; align-items: center; gap: 10px; font: 500 11px/1 var(--mono); letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 8px 12px 8px 10px; border: 1px solid var(--hair-strong); border-radius: var(--radius); }
+  .status-chip.tone-review { color: var(--accent-text); border-color: var(--accent); }
+  .status-chip.tone-quiet { color: var(--quiet-text); border-color: var(--quiet); }
+  .status-chip.tone-routine { color: var(--muted); }
 
-  .review-headline { font-size: 23px; font-weight: 700; line-height: 1.3; margin: 0 0 20px; max-width: 32ch; }
+  .review-figure { display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap; margin: 26px 0 6px; }
+  .figure-number { font: 400 clamp(96px, 15vw, 196px)/0.86 var(--serif); letter-spacing: -0.045em; color: var(--accent); }
+  .figure-unit { font: italic 400 clamp(20px, 2.2vw, 30px)/1.2 var(--serif); color: var(--muted); max-width: 18ch; }
+  .review-headline { font: 500 clamp(24px, 2.6vw, 34px)/1.15 var(--sans); letter-spacing: -0.02em; margin: 14px 0 0; max-width: 34ch; }
 
-  .comparison { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
-  .comparison-doc { flex: 0 0 auto; min-width: 0; padding: 12px 16px; border-radius: 8px; background: var(--surface);
-    cursor: pointer; border: 1px solid transparent; transition: border-color 150ms ease; }
-  .comparison-doc:hover, .comparison-doc:focus-visible { border-color: var(--rule); }
-  .comparison-label { display: block; font-size: 12.5px; color: var(--ink-3); margin-bottom: 4px; }
-  .comparison-date { display: block; font-family: var(--mono); font-size: 16px; font-weight: 500; border-radius: 4px;
-    padding: 1px 2px; margin: -1px -2px; }
-  .comparison-connector { flex: 1; position: relative; height: 1px; background: var(--rule); }
-  .comparison-gap { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--surface-raised);
-    color: var(--review); padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .comparison { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(140px, 2fr) minmax(220px, 1fr); align-items: center; margin: 40px 0 28px; }
+  .comparison-doc { border: 1px solid var(--hair-strong); border-radius: var(--radius); padding: 18px 22px; cursor: pointer; background: var(--surface);
+    transition: border-color 0.25s ease, background-color 1.2s ease, color 1.2s ease; }
+  .comparison-doc:hover, .comparison-doc:focus-visible { border-color: currentColor; }
+  .comparison-label { display: block; margin-bottom: 10px; }
+  .comparison-date { display: inline-block; font: 500 26px/1.1 var(--mono); letter-spacing: -0.01em; border-radius: 4px; padding: 2px 4px; margin: -2px -4px; }
+  .comparison-connector { position: relative; height: 44px; }
+  .comparison-connector::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: currentColor; opacity: 0.55;
+    transform: scaleX(0); transform-origin: left center; }
+  .comparison.is-drawn .comparison-connector::before { transform: scaleX(1); transition: transform 1s var(--ease-out) 0.15s; }
+  .comparison-gap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 10px;
+    font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 12px; border: 1px solid var(--hair-strong);
+    border-radius: var(--radius); background: var(--section-bg); white-space: nowrap; opacity: 0; transition: background-color 1.2s ease; }
+  .comparison-gap::before { content: ""; width: 8px; height: 8px; background: var(--accent); }
+  .comparison.is-drawn .comparison-gap { opacity: 1; transition: opacity 0.5s ease 0.95s, background-color 1.2s ease; }
+  .comparison-gap:empty { display: none; }
 
-  .review-note { color: var(--ink-2); font-size: 14px; max-width: 56ch; margin: 0 0 18px; }
-  .review-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .review-note { color: var(--muted); font-size: 15.5px; max-width: 56ch; margin-bottom: 22px; }
+  .review-actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 
-  /* Workspace: main + support columns */
-  .workspace { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-bottom: 34px; }
-  @media (max-width: 860px) { .workspace { grid-template-columns: 1fr; } }
-
-  h2.section-heading { font-size: 13.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 12px; }
-
-  .doc-list { display: flex; flex-direction: column; gap: 10px; }
-  .doc-card { background: var(--surface); border-radius: 8px; padding: 12px 14px; cursor: pointer;
-    border: 1px solid transparent; transition: border-color 150ms ease; }
-  .doc-card:hover, .doc-card:focus-visible { border-color: var(--rule); }
-  .doc-card-head { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
-  .doc-card-head svg { width: 15px; height: 15px; color: var(--ink-3); flex: none; }
-  .doc-card-date { font-family: var(--mono); font-size: 14px; margin-bottom: 6px; }
-  .doc-card-evidence { font-family: var(--mono); font-size: 12px; color: var(--ink-3); background: var(--bg);
-    border-radius: 4px; padding: 6px 8px; }
-
-  /* Activity */
-  .activity-empty { color: var(--ink-3); font-size: 13.5px; }
-  .activity-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--rule);
-    background: none; border-left: none; border-right: none; border-top: none; width: 100%; text-align: left; font: inherit;
-    color: inherit; cursor: default; }
+  .workspace { display: grid; grid-template-columns: 3fr 2fr; gap: 56px; margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--hair); }
+  .section-heading { display: block; margin-bottom: 14px; }
+  .activity-empty { color: var(--muted); font-size: 14.5px; }
+  .activity-row { display: grid; grid-template-columns: 16px 1fr; gap: 14px; align-items: start; padding: 16px 0; border-top: 1px solid var(--hair);
+    width: 100%; text-align: left; font: inherit; color: inherit; background: none; border-left: none; border-right: none; border-bottom: none; cursor: default; }
   .activity-row.clickable { cursor: pointer; }
-  .activity-row:last-child { border-bottom: none; }
-  .activity-row svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
-  .activity-row.tone-review svg { color: var(--review); }
-  .activity-row.tone-quiet svg { color: var(--accent); }
-  .activity-row.tone-routine svg { color: var(--ink-3); }
-  .activity-main { flex: 1; min-width: 0; }
-  .activity-label { font-size: 14px; font-weight: 500; }
-  .activity-status { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
-  .activity-detail { margin-top: 6px; }
-  .activity-detail summary { font-size: 12px; color: var(--ink-3); cursor: pointer; }
-  .activity-detail-body { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+  .activity-row.clickable:hover .activity-label { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--hair-strong); }
+  .activity-row > .glyph { margin-top: 6px; }
+  .activity-main { min-width: 0; }
+  .activity-label { font: 500 15px/1.35 var(--sans); }
+  .activity-status { margin-top: 4px; }
+  .activity-row.tone-review .activity-status { color: var(--accent-text); }
+  .activity-row.tone-quiet .activity-status { color: var(--quiet-text); }
+  .activity-detail { margin-top: 8px; }
+  .activity-detail summary { cursor: pointer; list-style: none; }
+  .activity-detail summary::-webkit-details-marker { display: none; }
+  .activity-detail summary::before { content: "+ "; }
+  .activity-detail[open] summary::before { content: "– "; }
+  .activity-detail-body { font: 12px/1.6 var(--mono); color: var(--muted); margin-top: 8px; overflow-wrap: anywhere; }
 
-  /* Ask the guardian */
-  .ask { margin: 26px 0 6px; }
-  .ask-form { display: flex; gap: 8px; }
-  .ask-input { flex: 1; min-width: 0; font: 14px var(--sans); padding: 9px 12px; border-radius: 6px; border: 1px solid var(--rule);
-    background: rgba(231, 237, 243, 0.04); color: var(--ink); }
-  .ask-input::placeholder { color: var(--ink-3); }
-  .ask-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .ask-suggestion { font: 12.5px var(--sans); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rule);
-    background: none; color: var(--ink-2); cursor: pointer; }
-  .ask-suggestion:hover { color: var(--ink); border-color: var(--ink-3); }
-  .ask-answer { margin-top: 14px; padding: 12px 14px; border-left: 2px solid var(--accent); }
-  .ask-answer.error { border-left-color: var(--review); }
-  .ask-answer-text { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-  .ask-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .ask-tool { font: 11.5px var(--mono); padding: 2px 8px; border-radius: 4px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
-  .trace { margin-top: 12px; }
-  .trace-heading { font-size: 12px; color: var(--ink-3); margin: 0 0 4px; }
-  .trace-step { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 5px 0; border-top: 1px solid var(--rule); font-size: 12.5px; }
-  .trace-step:first-of-type { border-top: none; }
-  .trace-num { color: var(--ink-3); font-family: var(--mono); }
-  .trace-line { color: var(--ink-2); }
-  .trace-line .tool { font-family: var(--mono); color: var(--ink); }
-  .trace-line .pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 6px; background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
-  .trace-line .pill.surfaced { background: var(--review-wash); color: var(--review); }
-  .trace-line .pill.silent { background: var(--accent-wash); color: var(--accent); }
-  .trace-line .pill.error { background: var(--review-wash); color: var(--review); }
-  .trace-summary { display: block; color: var(--ink-3); margin-top: 2px; }
+  .doc-list { display: flex; flex-direction: column; }
+  .doc-card { border-top: 1px solid var(--hair); padding: 14px 0 16px; cursor: pointer; transition: opacity 0.2s ease; }
+  .doc-card:hover, .doc-card:focus-visible { opacity: 0.8; }
+  .doc-card-head { display: flex; align-items: center; gap: 10px; font: 500 11px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .doc-card-date { font: 500 18px/1.2 var(--mono); margin: 8px 0; }
+  .doc-card-evidence { font: 12px/1.6 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
 
-  /* Bulletin replay + technical extras */
-  .demo-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  /* ACT 3: monitor */
+  .process { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
+  .process li { display: grid; grid-template-columns: 200px 1fr 1.3fr; gap: 24px 40px; padding: 24px 0; border-bottom: 1px solid var(--hair); align-items: baseline; }
+  .process-num { color: var(--accent-text); }
+  .process-title { font: 500 21px/1.2 var(--sans); letter-spacing: -0.015em; }
+  .process-desc { color: var(--muted); font-size: 14.5px; max-width: 54ch; }
 
-  details.extras { border-top: 1px solid var(--rule); padding-top: 14px; margin-top: 8px; }
-  details.extras summary { font-size: 13px; color: var(--ink-3); cursor: pointer; user-select: none; }
-  details.extras summary:hover { color: var(--ink-2); }
-  .gate-illustration { margin-top: 14px; }
-  .gate-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px;
-    border-bottom: 1px solid var(--rule); }
-  .gate-row:last-child { border-bottom: none; }
-  .gate-pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-  .gate-pill.tone-review { background: var(--review-wash); color: var(--review); }
-  .gate-pill.tone-routine { background: rgba(231, 237, 243, 0.06); color: var(--ink-3); }
+  .months { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--hair); border-radius: var(--radius); margin-top: 48px; overflow: hidden; }
+  .month { padding: 28px 28px 30px; min-height: 260px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.8s ease; }
+  .month + .month { border-left: 1px solid var(--hair); }
+  .month.is-review { background: var(--accent-wash); }
+  .month.is-quiet, .month.is-routine { background: var(--quiet-wash); }
+  .month-title { font: 500 22px/1.2 var(--sans); letter-spacing: -0.015em; }
+  .month-copy { color: var(--muted); font-size: 14.5px; max-width: 44ch; }
+  .month-actions { margin-top: 4px; }
+  .month-outcome { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--hair); display: flex; flex-direction: column; gap: 8px; }
+  .month-verdict { font: italic 400 34px/1 var(--serif); }
+  .month-verdict.tone-review { color: var(--accent-text); }
+  .month-verdict.tone-quiet, .month-verdict.tone-routine { color: var(--quiet-text); }
+  .month-detail { font: 12px/1.6 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .monitor-note { font-size: 13.5px; color: var(--muted); max-width: 72ch; margin-top: 18px; }
 
-  /* Draft side panel */
-  .overlay { position: fixed; inset: 0; background: rgba(6, 9, 12, 0.6); display: flex; justify-content: flex-end;
-    z-index: 10; opacity: 0; pointer-events: none; }
+  details.extras { margin-top: 40px; border-top: 1px solid var(--hair); padding-top: 18px; }
+  details.extras summary { font: 500 11px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); cursor: pointer;
+    user-select: none; list-style: none; }
+  details.extras summary::-webkit-details-marker { display: none; }
+  details.extras summary::before { content: "+ "; }
+  details.extras[open] summary::before { content: "– "; }
+  details.extras summary:hover { color: inherit; }
+  .extras-copy { font-size: 14px; color: var(--muted); max-width: 66ch; margin: 14px 0 16px; }
+  .gate-illustration { margin-top: 18px; max-width: 640px; border-top: 1px solid var(--hair); }
+  .gate-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 0; font-size: 14px; border-bottom: 1px solid var(--hair); }
+  .gate-pill { font: 500 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; border: 1px solid var(--hair-strong); white-space: nowrap; flex: none; }
+  .gate-pill.tone-review { border-color: var(--accent); color: var(--accent-text); }
+  .gate-pill.tone-routine { color: var(--muted); }
+
+  /* ACT 3b: ask the guardian */
+  .ask-inner { padding: 96px 48px 112px; min-height: 70vh; }
+  .ask-hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px 64px; align-items: end; padding-bottom: 36px; border-bottom: 1px solid var(--hair); margin-bottom: 40px; }
+  .ask-serif { font: italic 400 clamp(24px, 2.8vw, 42px)/1.1 var(--serif); color: var(--muted); }
+  .ask-headline { font: 500 clamp(36px, 5vw, 68px)/1 var(--sans); letter-spacing: -0.035em; margin-top: 6px; }
+  .ask-copy { color: var(--muted); font-size: 15px; max-width: 46ch; }
+  .ask-form { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; border-bottom: 1px solid var(--hair-strong); padding-bottom: 14px; }
+  .ask-input { font: 18px/1.4 var(--sans); background: none; border: none; color: inherit; padding: 10px 0; min-width: 0; width: 100%; }
+  .ask-input::placeholder { color: var(--muted); }
+  .ask-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .ask-suggestion { font: 13px/1.35 var(--sans); padding: 9px 12px; border: 1px solid var(--hair-strong); border-radius: var(--radius); background: none;
+    color: inherit; cursor: pointer; text-align: left; transition: border-color 0.2s ease; }
+  .ask-suggestion:hover { border-color: currentColor; }
+  .ask-answer { margin-top: 40px; padding: 4px 0 0 28px; border-left: 1px solid var(--accent); }
+  .ask-answer.error { border-left-style: dashed; }
+  .ask-answer-text { font: 18px/1.5 var(--sans); white-space: pre-wrap; max-width: 64ch; }
+  .ask-tools { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .ask-tool { font: 500 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 8px; border: 1px solid var(--hair-strong); border-radius: 4px; color: var(--muted); }
+  .trace { margin-top: 26px; }
+  .trace-heading { margin-bottom: 6px; }
+  .trace-step { display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--hair); font: 13px/1.55 var(--sans);
+    opacity: 0; transform: translateY(6px); animation: rise 0.5s var(--ease-out) forwards; animation-delay: var(--i, 0ms); }
+  .trace-num { font: 11px/1.4 var(--mono); color: var(--muted); padding-top: 3px; }
+  .trace-line { min-width: 0; overflow-wrap: anywhere; }
+  .trace-line .tool { font: 500 12.5px var(--mono); }
+  .trace-line .pill { display: inline-block; font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 7px;
+    border: 1px solid var(--hair-strong); border-radius: 4px; margin-left: 8px; color: var(--muted); vertical-align: 1px; }
+  .trace-line .pill.surfaced { border-color: var(--accent); color: var(--accent-text); }
+  .trace-line .pill.silent { border-color: var(--quiet); color: var(--quiet-text); }
+  .trace-line .pill.error { border-color: var(--accent); color: var(--accent-text); }
+  .trace-summary { display: block; color: var(--muted); margin-top: 4px; }
+  .ask-history { margin-top: 32px; border-top: 1px solid var(--hair); }
+  .ask-history-heading { margin: 14px 0 0; }
+  .ask-turn { padding: 14px 0; border-bottom: 1px solid var(--hair); }
+  .ask-turn-q { font: 13px/1.5 var(--sans); color: var(--muted); }
+  .ask-turn-a { font: 14px/1.55 var(--sans); white-space: pre-wrap; margin-top: 4px; }
+
+  .foot { border-top: 1px solid rgba(245, 243, 234, 0.18); }
+  .foot-inner { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 22px 0 26px; font: 11px/1.5 var(--mono);
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  /* Draft drawer: a paper surface entering from the right */
+  .overlay { position: fixed; inset: 0; background: rgba(17, 18, 16, 0.55); display: flex; justify-content: flex-end; z-index: 35;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
   .overlay.open { opacity: 1; pointer-events: auto; }
-  .overlay-panel { width: min(440px, 92vw); height: 100%; background: var(--surface-raised); padding: 24px 26px;
-    overflow-y: auto; transform: translateX(100%); box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35); }
-  .overlay-close { font: 500 13px var(--sans); background: none; border: 1px solid var(--rule); color: var(--ink-2);
-    border-radius: 6px; padding: 5px 11px; cursor: pointer; margin-bottom: 18px; }
-  .overlay-subject { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
-  .overlay-mode { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
-  .overlay-body { white-space: pre-wrap; font-size: 14px; color: var(--ink-2); }
-  .overlay-actions { margin: 0 0 18px; padding: 12px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-  .overlay-approved { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--accent); margin: 0; }
-  .overlay-approved svg { width: 15px; height: 15px; }
-  .overlay-hint { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; }
+  .overlay-panel { width: min(560px, 94vw); height: 100%; padding: 28px 40px 56px; overflow-y: auto; transform: translateX(100%);
+    border-left: 1px solid rgba(32, 33, 30, 0.16); }
+  .overlay-close { font: 500 11px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; background: none;
+    border: 1px solid var(--hair-strong); color: inherit; border-radius: var(--radius); padding: 9px 12px; cursor: pointer; margin-bottom: 36px; }
+  .overlay-kicker { display: block; margin-bottom: 14px; }
+  .overlay-subject { font: 400 clamp(24px, 2.4vw, 30px)/1.15 var(--serif); letter-spacing: -0.01em; margin-bottom: 10px; }
+  .overlay-mode { font: 11px/1.5 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 26px; }
+  .overlay-actions { margin: 0 0 26px; padding: 18px 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+  .send-row { margin: 0 0 14px; }
+  .overlay-panel .ask-input { font-size: 15px; border-bottom: 1px solid var(--hair-strong); padding: 8px 0; }
+  .overlay-approved { display: flex; align-items: center; gap: 10px; font: 500 11px/1.5 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--quiet-text); }
+  .overlay-hint { font-size: 12.5px; color: var(--muted); margin-top: 12px; max-width: 52ch; }
+  .overlay-body { white-space: pre-wrap; font: 15.5px/1.6 var(--sans); }
 
-  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.001ms !important; } }
+  /* Responsive */
+  @media (max-width: 1000px) {
+    .masthead-nav { display: none; }
+    .act-head, .scenario-row { grid-template-columns: 1fr; gap: 12px; }
+    .act-desc { grid-column: 1; }
+    .process li { grid-template-columns: 1fr; gap: 8px; }
+    .ask-hero { grid-template-columns: 1fr; }
+    .workspace { grid-template-columns: 1fr; gap: 40px; }
+  }
+  @media (max-width: 760px) {
+    :root { --frame-w: calc(100% - 32px); --masthead-h: 56px; }
+    .frame.lined { border-left: none; border-right: none; }
+    .top-meta { display: none; }
+    .brand-name { font-size: 12.5px; }
+    .hero { min-height: 0; }
+    .hero-frame { padding: 48px 0 0; gap: 48px; }
+    .hero-headline { font-size: clamp(38px, 11vw, 44px); }
+    .hero-serif { font-size: 26px; }
+    .ribbon { grid-template-columns: 1fr 1fr; }
+    .ribbon > * { padding: 18px 16px 20px; }
+    .ribbon-caption { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--hair); padding-left: 0; }
+    .ribbon > .ribbon-cell:nth-child(2) { padding-left: 0; }
+    .ribbon > .ribbon-cell:nth-child(3) { border-right: none; }
+    .ribbon > .ribbon-cell:nth-child(4) { grid-column: 1 / -1; padding-left: 0; border-top: 1px solid var(--hair); }
+    .act-inner, .ask-inner { padding: 56px 0 64px; }
+    .doc-grid { grid-template-columns: 1fr; }
+    .doc-slot + .doc-slot { border-left: none; border-top: 1px solid var(--hair); }
+    .comparison { grid-template-columns: 1fr; }
+    .comparison-connector { height: 76px; }
+    .comparison-connector::before { left: 50%; right: auto; top: 0; bottom: 0; width: 1px; height: auto; transform: scaleY(0); transform-origin: top center; }
+    .comparison.is-drawn .comparison-connector::before { transform: scaleY(1); }
+    .figure-number { font-size: clamp(88px, 28vw, 120px); }
+    .months { grid-template-columns: 1fr; }
+    .month + .month { border-left: none; border-top: 1px solid var(--hair); }
+    .month { min-height: 0; }
+    .ask-form { grid-template-columns: 1fr; }
+    .ask-form .btn { justify-self: start; }
+    .overlay-panel { padding: 20px 20px 48px; }
+    .error-banner { top: calc(var(--masthead-h) + 8px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .hero-copy > *, .trace-step { opacity: 1; transform: none; }
+    .comparison-connector::before { transform: none; }
+    .comparison-gap { opacity: 1; }
+  }
 </style>
 </head>
 <body>
-<div class="shell">
-  <header class="top">
-    <div class="top-identity">
-      <span class="product-name">Immigration Status Guardian</span>
-      <span class="top-meta" id="top-meta">Upload your documents to begin</span>
-    </div>
-    <button class="btn-link" id="reset-btn" type="button">Reset demo</button>
-  </header>
+<a class="skip-link" href="#upload-block">Skip to the upload</a>
 
-  <div class="error-banner hidden" id="error-banner" role="alert">
-    <span class="error-banner-text" id="error-text"></span>
-    <button type="button" id="error-dismiss">Dismiss</button>
+<header class="masthead theme-limestone">
+  <div class="frame masthead-inner">
+    <a class="brand" href="#top" aria-label="Immigration Status Guardian, back to top">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Immigration Status Guardian</span>
+    </a>
+    <nav class="masthead-nav" aria-label="Sections">
+      <a href="#upload-step">01 Upload</a>
+      <a href="#review-step">02 Review</a>
+      <a href="#bulletin-step">03 Monitor</a>
+      <a href="#ask">04 Ask</a>
+    </nav>
+    <div class="masthead-right">
+      <span class="top-meta" id="top-meta">Upload your documents to begin</span>
+      <button class="btn btn-hairline btn-sm" id="reset-btn" type="button">Reset demo</button>
+    </div>
+  </div>
+</header>
+
+<div class="error-banner hidden" id="error-banner" role="alert">
+  <span class="error-banner-text" id="error-text"></span>
+  <button type="button" id="error-dismiss">Dismiss</button>
+</div>
+
+<main>
+<section class="act act-open theme-limestone" id="upload-step">
+  <div class="hero" id="top">
+    <div class="hero-backdrop" aria-hidden="true"></div>
+    <div class="hero-horizon" aria-hidden="true"></div>
+    <div class="frame lined hero-frame">
+      <div class="hero-copy">
+        <p class="public-notice hidden" id="public-notice"></p>
+        <p class="eyebrow">Decision support · Documents · Filing windows</p>
+        <p class="hero-serif">Immigration paperwork</p>
+        <h1 class="hero-headline">Your important dates, watched quietly.</h1>
+        <p class="hero-lede">Guardian compares documents issued by different agencies, watches changing filing windows, and only interrupts when something needs review.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="hero-run-btn" type="button">Run the sample case <span class="arrow" aria-hidden="true">→</span></button>
+          <button class="btn btn-hairline" id="hero-upload-btn" type="button">Upload my documents</button>
+        </div>
+        <p class="legal-note">Not legal advice. Every result here is a flag for your attorney, never a status or eligibility determination.</p>
+      </div>
+      <div class="ribbon" aria-label="The bundled sample scenario">
+        <div class="ribbon-caption">
+          <span class="eyebrow">The sample scenario</span>
+          <span class="ribbon-fine">Facts from the bundled sample case, not product statistics.</span>
+        </div>
+        <div class="ribbon-cell"><span class="ribbon-num">3</span><span class="ribbon-label">Documents</span></div>
+        <div class="ribbon-cell"><span class="ribbon-num">55<span class="ribbon-unit">days</span></span><span class="ribbon-label">Discrepancy</span></div>
+        <div class="ribbon-cell"><span class="ribbon-num">1</span><span class="ribbon-label">Decision surfaced</span></div>
+      </div>
+    </div>
   </div>
 
-  <p class="public-notice hidden" id="public-notice"></p>
-  <p class="legal-note">Not legal advice — every result here is a flag for your attorney, never a status or eligibility determination.</p>
+  <div class="frame lined act-inner" id="upload-block">
+    <div class="act-head">
+      <span class="act-index">01 — Upload</span>
+      <h2 class="act-title">Upload your documents</h2>
+      <p class="act-desc">Download the synthetic sample I-94, I-797, and passport (or use the shortcut), then select them here. Your selected files are sent to the real extraction pipeline; nothing here is a canned replay of an upload that didn't happen.</p>
+    </div>
 
-  <section class="step" id="upload-step">
-    <div class="step-heading"><span class="step-number">1</span><h2 class="step-title">Upload your documents</h2></div>
-    <p class="step-desc">Download the synthetic sample I-94, I-797, and passport below (or use the shortcut), then select them here. Your selected files are sent to the real extraction pipeline — nothing here is a canned replay of an upload that didn't happen.</p>
+    <div class="scenario-row">
+      <label class="scenario-picker" for="scenario-select">
+        <span class="eyebrow">Sample case</span>
+        <select id="scenario-select" aria-label="Bundled sample scenario"></select>
+      </label>
+      <p class="scenario-desc" id="scenario-desc"></p>
+    </div>
 
-    <div class="upload-grid">
-      <div class="upload-card">
-        <div class="upload-card-title" id="upload-title-i94">Form I-94</div>
-        <div class="upload-links">
-          <a href="/api/sample-documents/i94" download="sample-i94.png">Download sample</a>
-          <button type="button" class="btn-link-sm" id="use-sample-i94">Use downloaded sample</button>
+    <div class="doc-grid">
+      <div class="doc-slot">
+        <div class="doc-slot-head"><span class="doc-slot-title" id="upload-title-i94">Form I-94</span><span class="doc-slot-index">1 / 3</span></div>
+        <p class="doc-slot-hint">Arrival record · admit-until date</p>
+        <input type="file" id="upload-i94" accept="image/png" aria-label="Form I-94 image">
+        <div class="doc-slot-links">
+          <a class="btn-text" href="/api/sample-documents/i94" download="sample-i94.png">Download sample</a>
+          <button type="button" class="btn-text" id="use-sample-i94">Use downloaded sample</button>
         </div>
-        <input type="file" id="upload-i94" accept="image/png">
         <div class="upload-preview hidden" id="preview-i94"></div>
       </div>
-      <div class="upload-card">
-        <div class="upload-card-title" id="upload-title-i797">Form I-797</div>
-        <div class="upload-links">
-          <a href="/api/sample-documents/i797" download="sample-i797.png">Download sample</a>
-          <button type="button" class="btn-link-sm" id="use-sample-i797">Use downloaded sample</button>
+      <div class="doc-slot">
+        <div class="doc-slot-head"><span class="doc-slot-title" id="upload-title-i797">Form I-797</span><span class="doc-slot-index">2 / 3</span></div>
+        <p class="doc-slot-hint">Approval notice · validity end date</p>
+        <input type="file" id="upload-i797" accept="image/png" aria-label="Form I-797 image">
+        <div class="doc-slot-links">
+          <a class="btn-text" href="/api/sample-documents/i797" download="sample-i797.png">Download sample</a>
+          <button type="button" class="btn-text" id="use-sample-i797">Use downloaded sample</button>
         </div>
-        <input type="file" id="upload-i797" accept="image/png">
         <div class="upload-preview hidden" id="preview-i797"></div>
       </div>
-      <div class="upload-card">
-        <div class="upload-card-title" id="upload-title-passport">Passport</div>
-        <div class="upload-links">
-          <a href="/api/sample-documents/passport" download="sample-passport.png">Download sample</a>
-          <button type="button" class="btn-link-sm" id="use-sample-passport">Use downloaded sample</button>
+      <div class="doc-slot">
+        <div class="doc-slot-head"><span class="doc-slot-title" id="upload-title-passport">Passport</span><span class="doc-slot-index">3 / 3</span></div>
+        <p class="doc-slot-hint">Biographic page · expiry date</p>
+        <input type="file" id="upload-passport" accept="image/png" aria-label="Passport image">
+        <div class="doc-slot-links">
+          <a class="btn-text" href="/api/sample-documents/passport" download="sample-passport.png">Download sample</a>
+          <button type="button" class="btn-text" id="use-sample-passport">Use downloaded sample</button>
         </div>
-        <input type="file" id="upload-passport" accept="image/png">
         <div class="upload-preview hidden" id="preview-passport"></div>
       </div>
     </div>
 
     <div class="process-row">
-      <button class="btn-primary" id="process-btn" disabled>Process documents</button>
-      <label class="scenario-picker" for="scenario-select">Sample case
-        <select id="scenario-select" aria-label="Bundled sample scenario"></select>
-      </label>
-      <button class="btn-quiet" id="load-bundled-btn" type="button">Load bundled sample &amp; process</button>
+      <button class="btn btn-primary" id="process-btn" disabled>Process documents <span class="arrow" aria-hidden="true">→</span></button>
+      <button class="btn btn-hairline" id="load-bundled-btn" type="button">Load bundled sample &amp; process</button>
       <span class="process-status" id="process-status"></span>
     </div>
-    <p class="scenario-desc" id="scenario-desc"></p>
-    <p class="upload-note" id="mode-note"></p>
-  </section>
+    <p class="mode-note" id="mode-note"></p>
+  </div>
+</section>
 
-  <section class="step" id="review-step">
-    <div class="step-heading"><span class="step-number">2</span><h2 class="step-title">Review the discrepancy</h2></div>
-    <div class="review-empty" id="review-empty">
-      <p>Once your documents are processed, any disagreement between the I-94 admit-until date and the I-797 validity end date will show here, with the source evidence and a draft for your attorney.</p>
+<section class="act act-review theme-paper" id="review-step">
+  <div class="frame lined act-inner">
+    <div class="act-head">
+      <span class="act-index">02 — Review</span>
+      <h2 class="act-title">Review the discrepancy</h2>
     </div>
+
+    <div class="review-empty" id="review-empty">
+      <p class="empty-serif">Nothing to review yet.</p>
+      <p class="empty-copy">Once your documents are processed, any disagreement between the I-94 admit-until date and the I-797 validity end date appears here, with the source evidence it was read from and a draft for your attorney.</p>
+      <p class="eyebrow empty-processing hidden" id="review-processing">Processing documents…</p>
+    </div>
+
     <div class="review-loaded hidden" id="review-loaded">
       <div class="status-chip" id="review-status"></div>
-      <h1 class="review-headline" id="review-headline"></h1>
+      <div class="review-figure hidden" id="review-figure">
+        <span class="figure-number" id="review-figure-number"></span>
+        <span class="figure-unit" id="review-figure-unit"></span>
+      </div>
+      <h3 class="review-headline" id="review-headline"></h3>
       <div class="comparison" id="comparison">
         <div class="comparison-doc" id="comparison-doc-i94" tabindex="0" role="button" aria-label="Highlight the I-94 admit-until date">
-          <span class="comparison-label">I-94 admit-until date</span>
+          <span class="comparison-label">Form I-94 · Admit until</span>
           <span class="comparison-date" id="date-admit_until"></span>
         </div>
-        <div class="comparison-connector" id="comparison-connector">
+        <div class="comparison-connector" id="comparison-connector" aria-hidden="true">
           <span class="comparison-gap" id="comparison-gap"></span>
         </div>
         <div class="comparison-doc" id="comparison-doc-i797" tabindex="0" role="button" aria-label="Highlight the I-797 valid-until date">
-          <span class="comparison-label">I-797 valid-until date</span>
+          <span class="comparison-label">Form I-797 · Valid until</span>
           <span class="comparison-date" id="date-i797_valid_until"></span>
         </div>
       </div>
       <p class="review-note" id="review-note"></p>
       <div class="review-actions">
-        <button class="btn-primary" id="open-draft-btn"></button>
-        <button class="btn-link" id="view-docs-btn">View source documents</button>
+        <button class="btn btn-primary" id="open-draft-btn"></button>
+        <button class="btn-text" id="view-docs-btn" type="button">View source documents</button>
       </div>
     </div>
 
-    <div class="workspace" style="margin-top: 28px">
-      <section>
-        <h2 class="section-heading">Recent monitoring activity</h2>
-        <div class="activity-empty" id="activity-empty">No activity yet — process your documents above, or replay a bulletin update below.</div>
+    <div class="workspace">
+      <section aria-labelledby="activity-heading">
+        <h3 class="section-heading" id="activity-heading">Monitoring activity</h3>
+        <div class="activity-empty" id="activity-empty">No activity yet. Process your documents above, or replay a bulletin update below.</div>
         <div id="activity-list"></div>
       </section>
-      <aside>
-        <h2 class="section-heading">Extracted evidence</h2>
+      <aside aria-labelledby="evidence-heading">
+        <h3 class="section-heading" id="evidence-heading">Extracted evidence</h3>
         <div class="doc-list" id="doc-list"></div>
       </aside>
     </div>
+  </div>
+</section>
 
-    <section class="ask" id="ask">
-      <h2 class="section-heading">Ask the guardian</h2>
-      <p class="review-note">A Strands agent whose only tools are the checks on this page. It runs a check and reports the result. It never determines status or gives advice.</p>
-      <form class="ask-form" id="ask-form">
-        <input class="ask-input" id="ask-input" type="text" autocomplete="off" aria-label="Question for the guardian" placeholder="Ask about your uploaded case or a bulletin month">
-        <button class="btn-primary" id="ask-btn" type="submit">Ask</button>
-      </form>
-      <div class="ask-suggestions" id="ask-suggestions"></div>
-      <div class="ask-answer hidden" id="ask-answer">
-        <p class="ask-answer-text" id="ask-answer-text"></p>
-        <div class="ask-tools" id="ask-tools"></div>
-        <div class="trace hidden" id="ask-trace"></div>
-      </div>
-      <div class="ask-history hidden" id="ask-history" aria-label="Earlier questions in this conversation">
-      </div>
-    </section>
-  </section>
-
-  <section class="step" id="bulletin-step">
-    <div class="step-heading"><span class="step-number">3</span><h2 class="step-title">Watch for a visa bulletin update</h2></div>
-    <p class="step-desc">No new upload needed — this replays the government's monthly visa bulletin publishing, exactly as an unattended scheduled check would see it, using real captured September/October 2025 DOS bulletin data for a separate seeded monitoring case (not the documents you uploaded above).</p>
-    <div class="demo-buttons">
-      <button class="btn-quiet" id="bulletin-sep-btn">Replay September update</button>
-      <button class="btn-quiet" id="bulletin-oct-btn">Replay October update</button>
+<section class="act act-monitor theme-limestone" id="bulletin-step">
+  <div class="frame lined act-inner">
+    <div class="act-head">
+      <span class="act-index">03 — Monitor</span>
+      <h2 class="act-title">Keep watching</h2>
+      <p class="act-desc">Every event, a document upload or a monthly bulletin update, follows the same five steps. Nothing reaches you unless it clears the gate.</p>
     </div>
 
-    <details class="extras">
-      <summary>How the decision gate filters events (technical detail)</summary>
-      <p class="upload-note">Every event — a document upload or a bulletin update — passes through the same materiality/actionability/window/novelty gate before anything is ever surfaced to you.</p>
-      <div class="demo-buttons">
-        <button class="btn-quiet" id="gate-btn">Inspect decision gate</button>
+    <ol class="process" aria-label="How the guardian works">
+      <li><span class="process-num">Step 01</span><span class="process-title">Read the documents</span><span class="process-desc">Each page is read for its governing date and the exact text it came from. Live Bedrock when it is available, a verified recorded response otherwise, and the label always says which.</span></li>
+      <li><span class="process-num">Step 02</span><span class="process-title">Compare the governing dates</span><span class="process-desc">The I-94 admit-until date against the I-797 validity end date. Arithmetic, not judgment.</span></li>
+      <li><span class="process-num">Step 03</span><span class="process-title">Apply the deterministic decision gate</span><span class="process-desc">Materiality, actionability, window, novelty. Plain Python, and the same gate for every event.</span></li>
+      <li><span class="process-num">Step 04</span><span class="process-title">Prepare the attorney-review action</span><span class="process-desc">A draft whose dates and flag are fixed text the model cannot edit. Approval writes a receipt on this clock, event, and rule version.</span></li>
+      <li><span class="process-num">Step 05</span><span class="process-title">Keep watching</span><span class="process-desc">Bulletin checks can run unattended on a schedule. A repeat stays silent; only a change that clears the gate is surfaced, once.</span></li>
+    </ol>
+
+    <div class="months">
+      <div class="month" id="month-2025-09">
+        <span class="eyebrow">Visa bulletin · September 2025</span>
+        <span class="month-title">September</span>
+        <p class="month-copy">The seeded case's priority date is not yet current. The check runs and nothing is surfaced.</p>
+        <div class="month-actions"><button class="btn btn-hairline" id="bulletin-sep-btn" type="button">Replay September update <span class="arrow" aria-hidden="true">→</span></button></div>
+        <div class="month-outcome hidden" id="month-outcome-2025-09"></div>
       </div>
+      <div class="month" id="month-2025-10">
+        <span class="eyebrow">Visa bulletin · October 2025</span>
+        <span class="month-title">October</span>
+        <p class="month-copy">USCIS switches to the Dates for Filing chart and the date becomes current. One notification, one draft.</p>
+        <div class="month-actions"><button class="btn btn-hairline" id="bulletin-oct-btn" type="button">Replay October update <span class="arrow" aria-hidden="true">→</span></button></div>
+        <div class="month-outcome hidden" id="month-outcome-2025-10"></div>
+      </div>
+    </div>
+    <p class="monitor-note">No new upload needed. Each replay feeds the captured September or October 2025 Department of State bulletin to the same check an unattended scheduled run would perform, against a separate seeded monitoring case, not the documents you uploaded above.</p>
+
+    <details class="extras">
+      <summary>How the decision gate filters events</summary>
+      <p class="extras-copy">Every event passes through the same materiality, actionability, window, and novelty gate before anything is surfaced to you.</p>
+      <button class="btn btn-hairline" id="gate-btn" type="button">Inspect decision gate</button>
       <div class="gate-illustration hidden" id="gate-illustration">
         <div id="gate-rows"></div>
       </div>
     </details>
-  </section>
-</div>
+  </div>
+</section>
+
+<section class="act act-ask theme-charcoal" id="ask">
+  <div class="frame lined ask-inner">
+    <div class="ask-hero">
+      <div>
+        <p class="ask-serif">When something needs a second look,</p>
+        <h2 class="ask-headline">Ask the guardian.</h2>
+      </div>
+      <p class="ask-copy">A Strands agent whose only tools are the checks on this page. It runs a check and reports the result. It never determines status or gives advice.</p>
+    </div>
+    <form class="ask-form" id="ask-form">
+      <input class="ask-input" id="ask-input" type="text" autocomplete="off" aria-label="Question for the guardian" placeholder="Ask about your uploaded case or a bulletin month">
+      <button class="btn btn-primary" id="ask-btn" type="submit">Ask <span class="arrow" aria-hidden="true">→</span></button>
+    </form>
+    <div class="ask-suggestions" id="ask-suggestions"></div>
+    <div class="ask-answer hidden" id="ask-answer">
+      <p class="ask-answer-text" id="ask-answer-text"></p>
+      <div class="ask-tools" id="ask-tools"></div>
+      <div class="trace hidden" id="ask-trace"></div>
+    </div>
+    <div class="ask-history hidden" id="ask-history" aria-label="Earlier questions in this conversation">
+      <p class="eyebrow ask-history-heading">Earlier in this session</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot theme-charcoal">
+  <div class="frame foot-inner">
+    <span>Immigration Status Guardian</span>
+    <span>Synthetic sample documents · Not legal advice</span>
+    <span>Strands Agents SDK · Amazon Bedrock</span>
+  </div>
+</footer>
 
 <div class="overlay" id="draft-overlay" inert>
-  <div class="overlay-panel" id="draft-panel" role="dialog" aria-modal="true" aria-labelledby="draft-subject">
+  <div class="overlay-panel theme-paper" id="draft-panel" role="dialog" aria-modal="true" aria-labelledby="draft-subject">
     <button class="overlay-close" id="draft-close">Close</button>
+    <span class="eyebrow overlay-kicker">Draft for attorney review</span>
     <p class="overlay-subject" id="draft-subject"></p>
     <p class="overlay-mode" id="draft-mode"></p>
     <div class="overlay-actions hidden" id="draft-actions">
       <div class="send-row hidden" id="draft-send-row">
         <input class="ask-input" id="draft-send-to" type="email" autocomplete="off" placeholder="Attorney email (optional)" aria-label="Attorney email address">
       </div>
-      <button class="btn-primary" id="draft-approve-btn" type="button">Approve for attorney review</button>
+      <button class="btn btn-primary" id="draft-approve-btn" type="button">Approve for attorney review <span class="arrow" aria-hidden="true">→</span></button>
       <p class="overlay-approved hidden" id="draft-approved"></p>
       <p class="overlay-hint" id="draft-approve-hint">Approval records a receipt on this clock, event, and rule version. Nothing is sent: this deployment has no mail transport.</p>
     </div>
@@ -381,11 +700,10 @@
 </div>
 
 <script>
-// Core interactivity (button wiring, all fetch/render logic) must never
-// depend on an external CDN resolving — Lucide icons and Motion animations
-// are loaded separately and treated as optional enhancements (see the two
-// small loader scripts below and icon()/fx()'s fallbacks), so a slow or
-// unreachable CDN degrades the page's polish, never its function.
+// Core interactivity (button wiring, all fetch/render logic) never depends
+// on anything outside this file: no icon library, no animation library,
+// no webfont. Motion uses CSS and the native Web Animations API, and
+// degrades to instant state changes under prefers-reduced-motion.
 
 // Dynamic values (API/model text) always go through textContent, never
 // innerHTML — a draft or evidence string containing markup must render as
@@ -399,14 +717,12 @@ function el(tag, { className, text, id } = {}) {
   return node;
 }
 
+// A small typographic mark (square, ring, envelope, page) drawn in CSS.
 function icon(name) {
-  const node = document.createElement('i');
-  node.setAttribute('data-lucide', name);
+  const node = document.createElement('span');
+  node.className = `glyph glyph-${name}`;
+  node.setAttribute('aria-hidden', 'true');
   return node;
-}
-
-function renderIcons() {
-  if (window.lucide) window.lucide.createIcons();
 }
 
 // --- Errors are always visible ---------------------------------------------
@@ -462,12 +778,6 @@ async function apiFetch(path, { method = 'GET', body, timeoutMs = 20000 } = {}) 
   return data;
 }
 
-// A checked binary download: failures reject (and so never populate a file
-// input with a broken/empty file) rather than silently wrapping whatever
-// came back, including an error page, in a File (F6).
-// Bundled scenarios (discrepant / matching / ambiguous). The picker only
-// changes which synthetic set the sample links and the shortcut fetch; the
-// upload path itself is identical for every scenario.
 // Deployment capabilities (/api/config): the UI only offers what the
 // backend can honestly do. email_enabled shows the attorney-address field;
 // public_demo shows the synthetic-only notice.
@@ -482,6 +792,9 @@ async function loadDeployConfig() {
     : 'Approval records a receipt on this clock, event, and rule version. Nothing is sent: this deployment has no mail transport.';
 }
 
+// Bundled scenarios (discrepant / matching / ambiguous). The picker only
+// changes which synthetic set the sample links and the shortcut fetch; the
+// upload path itself is identical for every scenario.
 const scenarioSelect = document.getElementById('scenario-select');
 const scenarioDesc = document.getElementById('scenario-desc');
 let scenarioCatalog = [];
@@ -516,6 +829,9 @@ async function loadScenarioCatalog() {
 }
 scenarioSelect.addEventListener('change', applyScenarioSelection);
 
+// A checked binary download: failures reject (and so never populate a file
+// input with a broken/empty file) rather than silently wrapping whatever
+// came back, including an error page, in a File (F6).
 async function fetchSampleBlob(key) {
   const response = await fetch(`/api/sample-documents/${key}?scenario=${encodeURIComponent(currentScenario())}`);
   if (!response.ok) throw new Error(`Could not download the ${key} sample (status ${response.status})`);
@@ -534,16 +850,24 @@ async function runAction(label, button, fn) {
   }
 }
 
+// Native Web Animations API with the same call shape as before (duration
+// in seconds). Under prefers-reduced-motion, or in a browser without
+// element.animate, the final frame is applied instantly instead.
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-function fx(target, keyframes, options) {
-  if (reduceMotion || !window.__motionAnimate) {
-    const node = typeof target === 'string' ? document.querySelector(target) : target;
-    for (const [prop, values] of Object.entries(keyframes)) {
-      node.style[prop] = Array.isArray(values) ? values[values.length - 1] : values;
-    }
+function fx(target, keyframes, options = {}) {
+  const node = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!node) return;
+  const finalFrame = {};
+  for (const [prop, values] of Object.entries(keyframes)) finalFrame[prop] = Array.isArray(values) ? values[values.length - 1] : values;
+  if (reduceMotion || typeof node.animate !== 'function') {
+    Object.assign(node.style, finalFrame);
     return;
   }
-  return window.__motionAnimate(target, keyframes, options);
+  return node.animate(keyframes, { duration: Math.round((options.duration || 0.3) * 1000), easing: options.easing || 'ease', fill: 'forwards' });
+}
+
+function scrollToNode(node, block = 'start') {
+  node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block });
 }
 
 function wireActivatable(node, handler) {
@@ -583,6 +907,7 @@ function setTopMeta(text) {
 function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
   emptyEl.classList.add('hidden');
   const row = el(onOpen ? 'button' : 'div', { className: `activity-row tone-${outcome.tone}${onOpen ? ' clickable' : ''}` });
+  if (onOpen) row.type = 'button';
   const main = el('div', { className: 'activity-main' });
   main.append(el('div', { className: 'activity-label', text: label }), el('div', { className: 'activity-status', text: outcome.label }));
   if (detail) {
@@ -594,7 +919,6 @@ function addActivityRow(listEl, emptyEl, { label, outcome, detail, onOpen }) {
   row.append(icon(outcome.icon || toneIcon[outcome.tone] || 'circle'), main);
   if (onOpen) row.addEventListener('click', onOpen);
   listEl.prepend(row);
-  renderIcons();
 }
 
 // --- Draft side panel (R8: focus entry/containment/return, inert closed
@@ -618,7 +942,6 @@ function renderApproval(draft) {
     draftApproved.replaceChildren(icon('check-circle'),
       document.createTextNode(`${draft.approval_state || 'Approved and ready to send'} · ${new Date(draft.approved_at).toLocaleString()}`));
     draftApproved.classList.remove('hidden');
-    renderIcons();
   } else {
     draftApproveBtn.classList.remove('hidden');
     draftApproved.classList.add('hidden');
@@ -653,7 +976,7 @@ function openDraft(draft, modeLabel, triggerEl) {
   renderApproval(draft);
   overlay.removeAttribute('inert');
   overlay.classList.add('open');
-  fx(overlayPanel, { transform: ['translateX(100%)', 'translateX(0%)'] }, { duration: 0.35, easing: 'ease-out' });
+  fx(overlayPanel, { transform: ['translateX(100%)', 'translateX(0%)'] }, { duration: 0.4, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
   draftClose.focus();
 }
 
@@ -666,11 +989,11 @@ function closeDraft() {
     overlay.setAttribute('inert', '');
     if (lastFocusedBeforeDraft && typeof lastFocusedBeforeDraft.focus === 'function') lastFocusedBeforeDraft.focus();
   };
-  const anim = fx(overlayPanel, { transform: ['translateX(0%)', 'translateX(100%)'] }, { duration: 0.25, easing: 'ease-in' });
+  const anim = fx(overlayPanel, { transform: ['translateX(0%)', 'translateX(100%)'] }, { duration: 0.28, easing: 'ease-in' });
   if (anim && anim.finished) {
     anim.finished.then(done).catch(done);
-    // Safety net: a WAAPI/Motion "finished" promise can fail to settle in
-    // some environments (e.g. a backgrounded tab pausing the animation) —
+    // Safety net: a "finished" promise can fail to settle in some
+    // environments (e.g. a backgrounded tab pausing the animation) —
     // closing the drawer and restoring focus must not depend on it forever.
     setTimeout(done, 400);
   } else {
@@ -735,6 +1058,7 @@ function setUploadControlsDisabled(disabled) {
     document.getElementById(`use-sample-${key}`).disabled = disabled;
   });
   document.getElementById('load-bundled-btn').disabled = disabled;
+  document.getElementById('hero-run-btn').disabled = disabled;
 }
 
 DOCUMENT_KEYS.forEach((key) => {
@@ -757,7 +1081,12 @@ function resetReviewSection() {
   // behind for the next render, whichever branch it takes.
   document.getElementById('review-empty').classList.add('hidden');
   document.getElementById('review-loaded').classList.remove('hidden');
-  document.getElementById('comparison').style.display = '';
+  document.getElementById('review-figure').classList.add('hidden');
+  document.getElementById('review-figure-number').textContent = '';
+  document.getElementById('review-figure-unit').textContent = '';
+  const comparison = document.getElementById('comparison');
+  comparison.style.display = '';
+  comparison.classList.remove('is-drawn');
   document.getElementById('comparison-gap').textContent = '';
   document.getElementById('date-admit_until').textContent = '';
   document.getElementById('date-i797_valid_until').textContent = '';
@@ -767,12 +1096,25 @@ function resetReviewSection() {
   openBtn.onclick = null;
 }
 
+// The review section changes atmosphere (paper -> slate) the first time a
+// processed result lands: the page has entered review mode.
+function enterReviewMode() {
+  const step = document.getElementById('review-step');
+  step.classList.remove('theme-paper');
+  step.classList.add('theme-slate', 'is-loaded');
+}
+
+function setReviewProcessing(active) {
+  document.getElementById('review-processing').classList.toggle('hidden', !active);
+}
+
 async function processDocuments() {
   const processBtn = document.getElementById('process-btn');
   const status = document.getElementById('process-status');
   const myVersion = ++uploadVersion;
   processBtn.disabled = true;
   setUploadControlsDisabled(true);
+  setReviewProcessing(true);
   status.replaceChildren(el('span', { className: 'spinner' }), document.createTextNode('Processing…'));
 
   const formData = new FormData();
@@ -785,6 +1127,7 @@ async function processDocuments() {
     setUploadControlsDisabled(false);
     updateProcessButtonState();
     if (myVersion !== uploadVersion) return; // superseded by a newer submission
+    setReviewProcessing(false);
     status.textContent = '';
     showError(`Process documents failed: ${err && err.message ? err.message : err}`);
     return;
@@ -793,13 +1136,31 @@ async function processDocuments() {
   updateProcessButtonState();
   status.textContent = '';
   if (myVersion !== uploadVersion) return; // a newer submission started; drop this stale result
+  setReviewProcessing(false);
 
   lastSubmissionRef = result.ref || null;
   renderResult(result);
 }
 
+// Whole days between two ISO dates (YYYY-MM-DD), or null if either is not
+// a date the browser can parse — the figure is arithmetic on the extracted
+// fields, never a guess.
+function daysBetween(a, b) {
+  const [ta, tb] = [a, b].map((v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? Date.parse(v + 'T00:00:00Z') : NaN));
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return null;
+  return Math.round(Math.abs(tb - ta) / 86400000);
+}
+
+function setReviewFigure(number, unit) {
+  const figure = document.getElementById('review-figure');
+  document.getElementById('review-figure-number').textContent = String(number);
+  document.getElementById('review-figure-unit').textContent = unit;
+  figure.classList.remove('hidden');
+}
+
 function renderResult(result) {
   resetReviewSection();
+  enterReviewMode();
 
   const modeLabel = result.mode === 'live' ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
   setTopMeta(`Case review · ${modeLabel}`);
@@ -819,13 +1180,12 @@ function renderResult(result) {
     card.tabIndex = 0;
     card.setAttribute('role', 'button');
     const head = el('div', { className: 'doc-card-head' });
-    head.append(icon('file-text'), el('span', { text: DOC_NAMES[key] }));
+    head.append(icon('file-text'), el('span', { text: `${DOC_NAMES[key]} · ${FIELD_LABELS[key].replace(/^(I-94|I-797|Passport) /, '')}` }));
     card.append(head, el('div', { className: 'doc-card-date', text: value }),
       el('div', { className: 'doc-card-evidence', text: result.evidence[key] || '(no evidence)' }));
     wireActivatable(card, () => highlightDate(key));
     return card;
   }));
-  renderIcons();
 
   if (result.error) {
     statusChip(document.getElementById('review-status'), { label: 'Needs review', tone: 'review', icon: 'circle-alert' });
@@ -842,23 +1202,32 @@ function renderResult(result) {
 
   document.getElementById('date-admit_until').textContent = result.fields.admit_until;
   document.getElementById('date-i797_valid_until').textContent = result.fields.i797_valid_until;
+  const gapDays = daysBetween(result.fields.admit_until, result.fields.i797_valid_until);
 
   if (result.draft) {
     const gapWords = result.draft.body.match(/disagree by (\d+) day/);
-    const gapText = gapWords ? `${gapWords[1]} days` : 'a discrepancy';
+    const days = gapDays !== null ? gapDays : (gapWords ? Number(gapWords[1]) : null);
+    const gapText = days !== null ? `${days} days` : 'a discrepancy';
     document.getElementById('review-headline').textContent = `Your document dates differ by ${gapText}`;
     document.getElementById('comparison-gap').textContent = gapText;
     document.getElementById('review-note').textContent = 'Review this discrepancy with your attorney.';
+    if (days !== null) setReviewFigure(days, 'days between the governing dates');
     const openBtn = document.getElementById('open-draft-btn');
     openBtn.replaceChildren(icon('mail'), document.createTextNode('Review attorney draft'));
     openBtn.onclick = (e) => openDraft(result.draft, modeLabel, e.currentTarget);
     openBtn.style.display = '';
-
-    fx(document.getElementById('comparison-gap'), { opacity: [0, 1] }, { duration: 0.3 });
   } else {
     document.getElementById('review-headline').textContent = 'No discrepancy found';
+    document.getElementById('comparison-gap').textContent = gapDays === 0 ? 'Dates agree' : (gapDays !== null ? `${gapDays} days` : '');
     document.getElementById('review-note').textContent = 'The I-94 admit-until date matches the I-797 validity end date.';
+    setReviewFigure(gapDays !== null ? gapDays : 0, 'days apart. The governing dates agree.');
   }
+
+  // Draw the connector once per render (a class toggle, so it also plays
+  // again when a new result replaces this one).
+  const comparison = document.getElementById('comparison');
+  void comparison.offsetWidth;
+  comparison.classList.add('is-drawn');
 
   addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'), {
     label: 'Document review — I-94 vs I-797',
@@ -871,14 +1240,14 @@ function renderResult(result) {
 function highlightDate(key) {
   const dateEl = document.getElementById(`date-${key}`);
   if (!dateEl) return;
-  fx(dateEl, { backgroundColor: ['transparent', 'rgba(88,191,169,0.28)', 'transparent'] }, { duration: 0.7, easing: 'ease-out' });
+  fx(dateEl, { backgroundColor: ['transparent', 'rgba(212, 186, 133, 0.45)', 'transparent'] }, { duration: 0.8, easing: 'ease-out' });
 }
 
 wireActivatable(document.getElementById('comparison-doc-i94'), () => highlightDate('admit_until'));
 wireActivatable(document.getElementById('comparison-doc-i797'), () => highlightDate('i797_valid_until'));
 
 document.getElementById('view-docs-btn').addEventListener('click', () => {
-  document.getElementById('doc-list').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  scrollToNode(document.getElementById('doc-list'), 'center');
 });
 
 document.getElementById('process-btn').addEventListener('click', processDocuments);
@@ -896,6 +1265,21 @@ async function loadBundledSample() {
   await processDocuments();
 }
 loadBundledBtn.addEventListener('click', () => runAction('Load bundled sample', loadBundledBtn, loadBundledSample));
+
+// Hero calls to action: the primary one is the same bundled-sample path as
+// the button in the upload block (files visibly land in the inputs, then
+// the review section changes atmosphere); the secondary one just brings
+// the user to the real upload controls.
+const heroRunBtn = document.getElementById('hero-run-btn');
+heroRunBtn.addEventListener('click', () => runAction('Run the sample case', heroRunBtn, async () => {
+  scrollToNode(document.getElementById('upload-block'));
+  await loadBundledSample();
+  if (!document.getElementById('review-loaded').classList.contains('hidden')) scrollToNode(document.getElementById('review-step'));
+}));
+document.getElementById('hero-upload-btn').addEventListener('click', () => {
+  scrollToNode(document.getElementById('upload-block'));
+  document.getElementById('upload-i94').focus({ preventScroll: true });
+});
 
 // --- Ask the guardian (a Strands agent over the engine's checks) ---------
 
@@ -917,8 +1301,11 @@ function renderTrace(question, steps) {
   const ask = el('div', { className: 'trace-step' });
   ask.append(el('span', { className: 'trace-num', text: '0' }), el('span', { className: 'trace-line', text: `Request: ${question}` }));
   askTrace.append(ask);
+  let index = 1;
   for (const step of steps) {
     const row = el('div', { className: 'trace-step' });
+    row.style.setProperty('--i', `${index * 110}ms`);
+    index += 1;
     const line = el('span', { className: 'trace-line' });
     line.append(el('span', { className: 'tool', text: step.tool }));
     const inputText = Object.entries(step.input || {}).map(([k, v]) => `${k}=${v}`).join(', ');
@@ -952,7 +1339,8 @@ let lastAskQuestion = ''; let lastAskAnswer = '';
 function pushAskHistory(question, answer) {
   const row = el('div', { className: 'ask-turn' });
   row.append(el('div', { className: 'ask-turn-q', text: question }), el('div', { className: 'ask-turn-a', text: answer }));
-  askHistory.prepend(row);
+  const heading = askHistory.querySelector('.ask-history-heading');
+  if (heading) heading.after(row); else askHistory.prepend(row);
   askHistory.classList.remove('hidden');
 }
 
@@ -990,12 +1378,26 @@ askForm.addEventListener('submit', (e) => { e.preventDefault(); const q = askInp
 
 // --- Step 3: bulletin replay ------------------------------------------------
 
+// Each month panel shows its own verdict after a replay, so "September
+// stays quiet, October surfaces" reads at a glance; the activity list in
+// the review section still gets the same row as before.
+function renderMonthOutcome(month, tone, verdict, detail) {
+  const panel = document.getElementById(`month-${month}`);
+  const outcome = document.getElementById(`month-outcome-${month}`);
+  if (!panel || !outcome) return;
+  panel.classList.remove('is-review', 'is-quiet', 'is-routine');
+  panel.classList.add(`is-${tone}`);
+  outcome.replaceChildren(el('span', { className: `month-verdict tone-${tone}`, text: verdict }), el('span', { className: 'month-detail', text: detail }));
+  outcome.classList.remove('hidden');
+}
+
 async function pollBulletin(month, label) {
   const result = await apiFetch('/api/bulletin-poll', { method: 'POST', body: { month } });
 
   if (result.error) {
     addActivityRow(document.getElementById('activity-list'), document.getElementById('activity-empty'),
       { label: `Visa bulletin — ${label}`, outcome: { label: 'Needs review', tone: 'review', icon: 'circle-alert' }, detail: result.error });
+    renderMonthOutcome(month, 'review', 'Needs review', result.error);
     return;
   }
 
@@ -1007,6 +1409,9 @@ async function pollBulletin(month, label) {
     detail: `${result.case_name} (priority date ${result.priority_date}) ${cutoffPlain} — a separate seeded monitoring example, not your uploaded case — ${result.alert.reason}`,
     onOpen: result.draft ? (e) => openDraft(result.draft, 'Recorded demo — captured bulletin data, unattended check', e.currentTarget) : null,
   });
+  const verdict = result.alert.decision === 'surfaced' ? 'Surfaced' : 'Stayed quiet';
+  renderMonthOutcome(month, outcome.tone, verdict,
+    `${result.case_name} · priority date ${result.priority_date} ${cutoffPlain} · ${outcome.label}`);
 }
 
 async function showGateDemo() {
@@ -1059,20 +1464,6 @@ async function runGuidedDemo() {
   });
 }
 runGuidedDemo();
-
-// Lucide's <script defer> may not have finished loading yet when this
-// classic (non-deferred) script runs — nothing needs an icon before a user
-// interacts, but render once more once every deferred script has settled.
-renderIcons();
-document.addEventListener('DOMContentLoaded', renderIcons);
-</script>
-
-<script type="module">
-// Optional enhancement only — see fx()/icon()'s fallbacks above. If this
-// import is slow or the CDN is unreachable, the page stays fully usable
-// with instant state changes instead of animated ones.
-import { animate } from "https://cdn.jsdelivr.net/npm/motion@13.2.0/+esm";
-window.__motionAnimate = animate;
 </script>
 </body>
 </html>
