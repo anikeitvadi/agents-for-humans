@@ -22,7 +22,7 @@ from agent.engine.decision_gate import GateInputs, evaluate_gate
 from agent.engine.store import ResetEpochMismatch, Store
 from agent.llm.document_client import FailoverExtractionClient, build_extraction_client
 from agent.llm.draft import build_bedrock_agent
-from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names
+from agent.llm.guardian import ask_in_session, build_guardian_agent, build_guardian_model, build_guardian_tools, tool_names
 from agent.notify import send_email
 from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll
 from agent.packs.immigration.pipeline import SPECIMENS_DIR, run_case_from_documents
@@ -37,6 +37,8 @@ IMMIGRATION_CLOCK_ID = "immigration-demo-user"
 _SAMPLE_DOCUMENT_KEYS = {"i94", "i797", "passport"}
 
 APPROVE_ACTION = "approve_for_attorney_review"
+SESSION_TTL_SECONDS = 30 * 60
+SESSION_CAP = 50
 
 
 def _load_receipts() -> dict:
@@ -63,6 +65,7 @@ class AskRequest(BaseModel):
     # response, so check_uploaded_case can discuss that specific case instead
     # of only the bundled sample. Omit if no case has been uploaded yet.
     submission_ref: SubmissionRef | None = None
+    session_id: str | None = None  # keep the conversation across questions (per page load)
 
 
 class ApproveDraftRequest(BaseModel):
@@ -115,6 +118,7 @@ def create_app(
     store = Store(db_path)
     public_demo = _public_demo() if public_demo is None else public_demo
     limiter = _RateLimiter(limit=int(os.environ.get("GUARDIAN_RATE_LIMIT", "40")), window=60.0)
+    sessions: dict[str, dict] = {}
     upload_limiter = _RateLimiter(limit=int(os.environ.get("GUARDIAN_UPLOAD_RATE_LIMIT", "8")), window=60.0)
     # None when no AWS credentials are configured (e.g. this sandbox) — the
     # pipeline's deterministic core is a fully correct draft either way; a
@@ -433,7 +437,24 @@ def create_app(
             }
         ref = req.submission_ref.model_dump() if req.submission_ref else None
         tools = _build_guardian_tools(current_submission_ref=ref)
-        result = ask_guardian(guardian_model, tools, req.question)
+        # Multi-turn: one Strands Agent per session id (per page load) so a
+        # follow-up question can build on the previous tool result. The
+        # agent is rebuilt if the uploaded case changed, and sessions expire.
+        now = time.monotonic()
+        for stale in [sid for sid, s in sessions.items() if now - s["seen"] > SESSION_TTL_SECONDS]:
+            sessions.pop(stale, None)
+        session = sessions.get(req.session_id) if req.session_id else None
+        if req.session_id and (session is None or session["ref"] != ref):
+            if len(sessions) >= SESSION_CAP:
+                sessions.pop(min(sessions, key=lambda sid: sessions[sid]["seen"]), None)
+            session = {"agent": build_guardian_agent(guardian_model, tools), "ref": ref, "seen": now, "turns": 0}
+            sessions[req.session_id] = session
+        if session is not None:
+            session["seen"] = now
+            session["turns"] += 1
+            result = ask_in_session(session["agent"], req.question)
+        else:
+            result = ask_in_session(build_guardian_agent(guardian_model, tools), req.question)
         return {
             "available": True,
             "question": req.question,
@@ -442,6 +463,8 @@ def create_app(
             "trace": result.trace_dicts(),
             "tools": tool_names(tools),
             "error": result.error,
+            "session_id": req.session_id,
+            "turn": session["turns"] if session is not None else 1,
         }
 
     ui_dir = REPO_ROOT / "ui"

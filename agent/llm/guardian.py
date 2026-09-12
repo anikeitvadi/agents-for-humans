@@ -327,10 +327,17 @@ def build_trace(messages: list[dict]) -> list[TraceStep]:
 def ask_guardian(model: Model, tools: list, question: str) -> AskResult:
     """Answer one question with a fresh agent. Any model/agent failure is
     returned as `error`, never raised, so callers degrade visibly."""
-    agent = build_guardian_agent(model, tools)
+    return ask_in_session(build_guardian_agent(model, tools), question)
+
+
+def ask_in_session(agent: Agent, question: str) -> AskResult:
+    """Answer a question on an existing agent, keeping its conversation so a
+    follow-up ("what should I tell my attorney?") can build on the last
+    tool result. The trace covers only this turn's tool calls."""
+    before = len(agent.messages)
     try:
         result = agent(question)
     except Exception as exc:  # noqa: BLE001 - surface, don't crash the request
         return AskResult(answer="", error=f"{type(exc).__name__}: {exc}")
-    trace = build_trace(agent.messages)
+    trace = build_trace(agent.messages[before:])
     return AskResult(answer=str(result).strip(), tools_called=[step.tool for step in trace], trace=trace)

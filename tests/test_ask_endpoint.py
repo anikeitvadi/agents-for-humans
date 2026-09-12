@@ -94,3 +94,19 @@ def test_ask_without_a_submission_ref_reports_no_uploaded_case_available(tmp_pat
 
     assert body["trace"][0]["status"] == "error"
     assert "No uploaded case is available" in body["trace"][0]["summary"]
+
+
+def test_session_id_keeps_one_agent_across_questions(tmp_path):
+    model = ScriptedModel([("tool", "run_sample_case_check", {}), ("text", "One thing needs review."), ("text", "Approve the draft when ready.")])
+    client = TestClient(create_app(db_path=str(tmp_path / "demo.db"), guardian_model=model))
+
+    first = client.post("/api/ask", json={"question": "Check the sample case.", "session_id": "page-1"}).json()
+    second = client.post("/api/ask", json={"question": "And then?", "session_id": "page-1"}).json()
+
+    assert first["turn"] == 1 and second["turn"] == 2
+    assert second["session_id"] == "page-1"
+    assert second["tools_called"] == []
+    assert len(model.calls[-1]["messages"]) >= 4  # history carried into the second turn
+
+    fresh = client.post("/api/ask", json={"question": "Hello?", "session_id": "page-2"}).json()
+    assert fresh["turn"] == 1

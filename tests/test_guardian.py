@@ -221,3 +221,26 @@ def test_trace_records_tool_errors(tools):
 def test_trace_is_empty_when_no_tool_was_called(tools):
     result = ask_guardian(ScriptedModel([("text", "I can only check documents, bulletins, and recalls.")]), tools, "hi")
     assert result.trace == [] and result.tools_called == []
+
+
+def test_session_keeps_the_conversation_and_traces_only_the_new_turn(tools):
+    from agent.llm.guardian import ask_in_session, build_guardian_agent
+
+    model = ScriptedModel(
+        [
+            ("tool", "check_document_dates", {"i94_admit_until": "2026-11-03", "i797_valid_until": "2026-12-28"}),
+            ("text", "They disagree by 55 days."),
+            ("text", "Tell your attorney the I-94 ends 55 days before the I-797; a draft is ready."),
+        ]
+    )
+    agent = build_guardian_agent(model, tools)
+
+    first = ask_in_session(agent, "Do my documents disagree?")
+    second = ask_in_session(agent, "What should I tell my attorney?")
+
+    assert first.tools_called == ["check_document_dates"]
+    assert second.tools_called == [] and second.trace == []  # no new tool call on the follow-up
+    assert "55 days" in second.answer
+    # The follow-up saw the whole conversation, including the earlier tool result.
+    assert len(model.calls[-1]["messages"]) >= 4
+    assert any("toolResult" in block for m in model.calls[-1]["messages"] for block in m.get("content", []))
