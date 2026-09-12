@@ -99,6 +99,37 @@ tests/    180 offline tests (rules, extraction, decision gate, bulletin poll,
 **One human action.** "Approve for attorney review" records an idempotent receipt (clock, event, rule version, action, timestamp) in the ledger. Nothing is sent; there is no mail transport and the UI never claims one.
 
 **The decision gate** (`agent/engine/decision_gate.py`) is why the agent stays quiet: an event only surfaces if it's material, actionable, has an open window, and hasn't already been surfaced for the same event. Everything else updates the ledger silently.
+## Sample scenarios
+
+Three bundled synthetic document sets, selectable above the upload cards (`/api/scenarios`, `agent/packs/immigration/scenarios.py`):
+
+| Scenario | What the documents say | Expected outcome |
+|---|---|---|
+| I-94 cut to passport expiry | I-94 admit-until 2026-11-03, I-797 valid to 2026-12-28 | Surfaced: one ping, one draft |
+| Dates agree | I-94 and I-797 both end 2026-12-28 | Silent on the primary flow, not just on repeats |
+| Passport expiry unreadable | The passport's expiration line is smudged | Needs review: extraction reports the field missing and the rule refuses to run |
+
+Recorded mode identifies each document by the sha256 of its bytes, so a swapped or edited file never gets another file's replay. A scenario is usable offline only once its live Bedrock response has been recorded with `scripts/record_extraction.py --scenario <name>`; until then the picker labels it "live Bedrock only".
+
+## Unattended run and the ping
+
+The scheduled beat is real, not a button. `deploy/unattended/provision.sh` creates an SNS topic with an email subscription, a Lambda that invokes the AgentCore Runtime with `{"check": "bulletin", "month": "2025-10", "notify_topic_arn": ...}`, and an EventBridge schedule (daily by default). The Runtime runs the same engine, gate, and ledger as the UI's replay buttons and publishes exactly one ping when the gate surfaces; a repeat run stays silent and returns the same draft. The response carries `notified`, the SNS `message_id`, and the topic, so the outcome is inspectable in CloudWatch.
+
+```bash
+AGENT_RUNTIME_ARN=arn:aws:bedrock-agentcore:us-east-1:<account>:runtime/<id> NOTIFY_EMAIL=you@example.com bash deploy/unattended/provision.sh
+aws lambda invoke --function-name guardian-unattended-check --payload '{"month":"2025-10"}' --cli-binary-format raw-in-base64-out /dev/stdout
+```
+
+`{"probe": "visa_bulletin"}` on the Runtime reports whether the live State Department bulletin page is reachable from inside AWS (it blocks many home networks); a positive result is the first step toward replacing the captured bulletins.
+
+## Approval delivery
+
+"Approve for attorney review" always records the receipt. When the deployment has a verified SES sender (`GUARDIAN_SES_SENDER`), the draft panel also offers an attorney address and the draft is sent through Amazon SES; the state reads "Approved and sent to ..." only when SES confirms a message id, and "Approved and ready to send" otherwise. Without SES configured the UI never shows the field and never claims a send.
+
+## Public demo mode
+
+`GUARDIAN_PUBLIC_DEMO=1` (set in `apprunner.yaml`) makes a shared URL safe: uploads are limited to the bundled synthetic sets (any other file is refused with a clear message, so nobody's real papers can be processed), per-client request caps return HTTP 429, and the page shows a "synthetic documents only" notice from `/api/config`. Deploy with App Runner from this repository using `apprunner.yaml`.
+
 ## Known scope limits (by design, for this deadline)
 
 - **No lawful-status, F-1/OPT, or unlawful-presence computation.** That domain logic (INA §212(a)(9)(B) bars, status-length math) is deferred to a later iteration — see `HANDOFF.md`. This build only compares two document dates arithmetically.

@@ -1,0 +1,24 @@
+# AWS App Runner "source code" deployment for the public demo link.
+# In the App Runner console: create service -> source: this GitHub repo,
+# branch main, automatic deploys off -> runtime: Python 3.11 -> use this file.
+# The service role needs Bedrock model access (bedrock:InvokeModel*) and,
+# for approval emails, ses:SendEmail on a verified sender.
+version: 1.0
+runtime: python311
+build:
+  commands:
+    build:
+      - pip install --upgrade pip
+      - pip install .
+run:
+  runtime-version: 3.11
+  command: uvicorn agent.app:app --host 0.0.0.0 --port 8080
+  network:
+    port: 8080
+  env:
+    - name: GUARDIAN_PUBLIC_DEMO
+      value: "1"
+    - name: GUARDIAN_DB_PATH
+      value: /tmp/guardian/demo.db
+    - name: AWS_REGION
+      value: us-east-1

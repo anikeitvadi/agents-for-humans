@@ -5,6 +5,9 @@ without changing any of this logic.
 """
 
 import json
+import os
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile
@@ -20,8 +23,10 @@ from agent.engine.store import ResetEpochMismatch, Store
 from agent.llm.document_client import FailoverExtractionClient, build_extraction_client
 from agent.llm.draft import build_bedrock_agent
 from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names
+from agent.notify import send_email
 from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll
 from agent.packs.immigration.pipeline import SPECIMENS_DIR, run_case_from_documents
+from agent.packs.immigration.scenarios import coherent_recorded_scenario, get_scenario, known_specimen_hashes, scenario_summaries, sha256_bytes
 from agent.packs.recalls.feed import get_recall_item
 from agent.packs.recalls.pipeline import run_recall_check
 
@@ -64,6 +69,34 @@ class ApproveDraftRequest(BaseModel):
     clock_id: str
     event_id: str
     rule_version: str
+    send_to: str | None = None  # optional attorney address; only used when SES is configured
+
+
+def _public_demo() -> bool:
+    return os.environ.get("GUARDIAN_PUBLIC_DEMO", "") not in ("", "0", "false", "False")
+
+
+def _ses_sender() -> str | None:
+    return os.environ.get("GUARDIAN_SES_SENDER") or None
+
+
+class _RateLimiter:
+    """Small in-memory per-client limiter for the public demo: `limit`
+    requests per `window` seconds, keyed by client address."""
+
+    def __init__(self, limit: int, window: float):
+        self.limit, self.window = limit, window
+        self._hits: dict[str, deque] = defaultdict(deque)
+
+    def allow(self, key: str, now: float | None = None) -> bool:
+        now = time.monotonic() if now is None else now
+        hits = self._hits[key]
+        while hits and now - hits[0] > self.window:
+            hits.popleft()
+        if len(hits) >= self.limit:
+            return False
+        hits.append(now)
+        return True
 
 
 _PRIOR_BULLETIN_MONTH = PRIOR_CAPTURED_MONTH
@@ -75,9 +108,14 @@ def create_app(
     guardian_model: Model | None = None,
     auto_guardian_model: bool = True,
     extraction_client=None,
+    ses_client=None,
+    public_demo: bool | None = None,
 ) -> FastAPI:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     store = Store(db_path)
+    public_demo = _public_demo() if public_demo is None else public_demo
+    limiter = _RateLimiter(limit=int(os.environ.get("GUARDIAN_RATE_LIMIT", "40")), window=60.0)
+    upload_limiter = _RateLimiter(limit=int(os.environ.get("GUARDIAN_UPLOAD_RATE_LIMIT", "8")), window=60.0)
     # None when no AWS credentials are configured (e.g. this sandbox) — the
     # pipeline's deterministic core is a fully correct draft either way; a
     # real Agent only adds personalization when Bedrock is actually reachable.
@@ -149,14 +187,54 @@ def create_app(
         # this message instead of failing silently.
         return JSONResponse(status_code=500, content={"error": f"{type(exc).__name__}: {exc}"})
 
+    @app.middleware("http")
+    async def _public_demo_guards(request: Request, call_next):
+        # Public demo only: per-client request caps so a shared URL cannot
+        # be turned into a Bedrock bill. Local runs are unlimited.
+        if public_demo and request.url.path.startswith("/api/"):
+            client_key = request.client.host if request.client else "unknown"
+            active = upload_limiter if request.url.path == "/api/process-documents" else limiter
+            if not active.allow(client_key):
+                return JSONResponse(status_code=429, content={"error": "Too many requests for the public demo. Wait a minute and try again."})
+        return await call_next(request)
+
+    @app.get("/api/config")
+    def config():
+        """What this deployment can do, so the UI never offers an action
+        the backend cannot honestly perform."""
+        return {
+            "public_demo": public_demo,
+            "email_enabled": bool(_ses_sender()),
+            "notice": (
+                "Public demo: synthetic documents only. Uploads are limited to the bundled sample sets; "
+                "do not upload real immigration papers here."
+                if public_demo
+                else None
+            ),
+        }
+
+    @app.get("/api/scenarios")
+    def scenarios():
+        """The bundled sample scenarios (discrepant / matching / ambiguous)
+        and whether each can run offline (has a recorded Bedrock response)."""
+        return {"scenarios": scenario_summaries()}
+
     @app.get("/api/sample-documents/{key}")
-    def sample_document(key: str):
+    def sample_document(key: str, scenario: str = "discrepant"):
         """Serves the synthetic I-94/I-797/passport specimen images for
         download so a user can visibly select/upload them — the upload flow
-        then processes exactly those selected bytes (R2/product feedback)."""
+        then processes exactly those selected bytes (R2/product feedback).
+        `scenario` picks which bundled set (see agent/packs/immigration/scenarios.py)."""
         if key not in _SAMPLE_DOCUMENT_KEYS:
             raise HTTPException(status_code=404, detail="unknown sample document")
-        return FileResponse(SPECIMENS_DIR / f"{key}.png", media_type="image/png")
+        try:
+            chosen = get_scenario(scenario)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        path = chosen.specimen_path(key)
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"scenario '{scenario}' has no {key} specimen")
+        return FileResponse(path, media_type="image/png")
 
     @app.post("/api/process-documents")
     async def process_documents(i94: UploadFile, i797: UploadFile, passport: UploadFile):
@@ -174,6 +252,17 @@ def create_app(
         cleared them (see Store.reset/ResetEpochMismatch).
         """
         documents = {"i94": await i94.read(), "i797": await i797.read(), "passport": await passport.read()}
+        if public_demo:
+            known = known_specimen_hashes()
+            provenance = {key: sha256_bytes(data) for key, data in documents.items()}
+            if any(provenance[key] not in known for key in documents):
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "This public demo only processes the bundled synthetic sample documents. "
+                        "Use 'Download sample' or 'Load bundled sample & process', and never upload real papers here."
+                    },
+                )
         epoch = store.current_epoch()
         try:
             result = await run_in_threadpool(
@@ -303,10 +392,20 @@ def create_app(
         if draft is None or draft.status != "ready":
             return JSONResponse(status_code=404, content={"error": "No ready draft exists for that clock/event/rule version."})
         receipt = store.record_action(req.clock_id, req.event_id, req.rule_version, APPROVE_ACTION)
+        delivery = None
+        state = "Approved and ready to send"
+        sender = _ses_sender()
+        if req.send_to and sender:
+            delivery = send_email(sender, req.send_to, draft.subject or "Document review needed", draft.body or "", client=ses_client).as_dict()
+            state = f"Approved and sent to {req.send_to}" if delivery["sent"] else "Approved; email delivery failed"
+        elif req.send_to and not sender:
+            delivery = {"sent": False, "channel": "ses", "target": req.send_to, "message_id": None, "error": "email is not configured on this deployment (GUARDIAN_SES_SENDER unset)"}
+            state = "Approved and ready to send"
         return {
             "approved": True,
             "already_approved": receipt.already_recorded,
-            "state": "Approved and ready to send",
+            "state": state,
+            "delivery": delivery,
             "receipt": {
                 "clock_id": receipt.clock_id,
                 "event_id": receipt.event_id,

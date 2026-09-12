@@ -14,6 +14,19 @@ pack logic lives here. Two payload shapes:
   {"prompt": "..."}                   -> ask the guardian agent: a Strands
                                          Agent whose only tools are the
                                          engine's checks (agent/llm/guardian.py).
+  {"check": "bulletin", "month": "2025-10",
+   "notify_topic_arn": "arn:aws:sns:..."}
+                                      -> the unattended run: poll one captured
+                                         Visa Bulletin month for the seeded
+                                         case; if the gate surfaces, publish
+                                         one ping to the SNS topic (payload
+                                         value or GUARDIAN_SNS_TOPIC_ARN).
+                                         This is what the EventBridge schedule
+                                         invokes (deploy/unattended/).
+  {"probe": "visa_bulletin"}          -> from inside AWS, fetch the live DOS
+                                         Visa Bulletin page and report whether
+                                         it is reachable (it blocks many home
+                                         networks).
 
 Optional keys on both: "clock_id", "event_id" (dedup identity in the ledger).
 Every response labels the extraction mode; a recorded replay is never
@@ -42,7 +55,8 @@ from agent.engine.store import Store  # noqa: E402
 from agent.llm.document_client import RecordedResponseClient, build_extraction_client  # noqa: E402
 from agent.llm.draft import DraftResult, build_bedrock_agent  # noqa: E402
 from agent.llm.guardian import ask_guardian, build_guardian_model, build_guardian_tools, tool_names  # noqa: E402
-from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH  # noqa: E402
+from agent.notify import publish_sns  # noqa: E402
+from agent.packs.immigration.bulletin import PRIOR_CAPTURED_MONTH, load_seeded_case, run_bulletin_poll  # noqa: E402
 from agent.packs.immigration.pipeline import run_discrepancy_check, run_sample_case  # noqa: E402
 from agent.packs.recalls.feed import get_recall_item  # noqa: E402
 
@@ -87,6 +101,74 @@ def _draft_dict(draft: DraftResult | None) -> dict | None:
     }
 
 
+VISA_BULLETIN_URL = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html"
+
+
+def _unattended_bulletin_check(payload: dict) -> dict:
+    """The scheduled beat: same engine, same gate, same ledger as the UI's
+    replay buttons. A surfaced result is the only thing that pings."""
+    month = str(payload.get("month", "2025-10"))
+    topic_arn = payload.get("notify_topic_arn") or os.environ.get("GUARDIAN_SNS_TOPIC_ARN")
+    case = load_seeded_case()
+    result = run_bulletin_poll(
+        _store,
+        clock_id="bulletin-clock",
+        month=month,
+        case=case,
+        agent=_agent,
+        previous_month=PRIOR_CAPTURED_MONTH.get(month),
+    )
+    decision = result.alert.decision if result.alert else None
+    notification = None
+    if decision == "surfaced" and topic_arn and result.draft is not None:
+        body = (
+            f"{result.draft.body}\n\n"
+            f"Case: {case.case_name}\nBulletin month: {month}\nCutoff status: {result.cutoff.status if result.cutoff else None}\n"
+            "Sent by Immigration Status Guardian's unattended check. This is a flag for attorney review, not legal advice."
+        )
+        notification = publish_sns(topic_arn, result.draft.subject, body).as_dict()
+    return {
+        "path": "bulletin",
+        "month": month,
+        "case_name": case.case_name,
+        "error": result.error,
+        "cutoff_status": result.cutoff.status if result.cutoff else None,
+        "alert": {"decision": result.alert.decision, "reason": result.alert.reason} if result.alert else None,
+        "draft": _draft_dict(result.draft),
+        "notified": bool(notification and notification.get("sent")),
+        "notification": notification,
+        "topic_arn": topic_arn,
+    }
+
+
+def _probe_visa_bulletin() -> dict:
+    """Is the live DOS Visa Bulletin reachable from here? Read-only, no
+    parsing: a first step toward replacing the captured bulletins."""
+    import re
+
+    import httpx
+
+    try:
+        response = httpx.get(
+            VISA_BULLETIN_URL,
+            timeout=10.0,
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; ImmigrationStatusGuardian/0.1)"},
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {"path": "probe", "url": VISA_BULLETIN_URL, "reachable": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+    text = re.sub(r"<[^>]+>", " ", response.text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return {
+        "path": "probe",
+        "url": VISA_BULLETIN_URL,
+        "reachable": response.status_code == 200 and "Visa Bulletin" in text,
+        "status_code": response.status_code,
+        "bytes": len(response.content),
+        "sample": text[:240],
+    }
+
+
 @app.entrypoint
 def invoke(payload: dict | None) -> dict:
     payload = payload or {}
@@ -113,6 +195,12 @@ def invoke(payload: dict | None) -> dict:
             "tools": names,
             "error": result.error,
         }
+
+    if payload.get("check") == "bulletin":
+        return _unattended_bulletin_check(payload)
+
+    if payload.get("probe") == "visa_bulletin":
+        return _probe_visa_bulletin()
 
     if "fields" in payload:
         result = run_discrepancy_check(

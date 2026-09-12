@@ -20,6 +20,7 @@ from agent.engine.schema import Alert, Clock, Event
 from agent.engine.store import Store
 from agent.llm.draft import DraftResult, build_attorney_draft
 from agent.llm.extract import extract_fields
+from agent.packs.immigration.scenarios import coherent_recorded_scenario
 from agent.packs.immigration.rules import check_i94_i797_discrepancy
 
 SAMPLE_CASE_NAME = "Sample Case — H-1B, I-94 cut to passport expiry"
@@ -53,6 +54,7 @@ def _sha256(document_bytes: bytes) -> str:
 
 
 def _known_specimen_hashes() -> dict[str, str]:
+    """The default (discrepant) scenario's specimen hashes, by document key."""
     return {key: _sha256((SPECIMENS_DIR / f"{key}.png").read_bytes()) for key, _ in _SAMPLE_CASE_DOCUMENTS}
 
 
@@ -165,8 +167,7 @@ def extract_case_documents(client, mode: str, model_id: str, documents: dict[str
     extraction.mode_reason = getattr(client, "fallback_reason", None) or first_field_error
 
     if final_mode == "recorded":
-        known = _known_specimen_hashes()
-        if any(provenance[key] != known[key] for key, _ in _SAMPLE_CASE_DOCUMENTS):
+        if coherent_recorded_scenario(provenance) is None:
             return SampleCaseExtraction(
                 needs_review=True,
                 mode="recorded",

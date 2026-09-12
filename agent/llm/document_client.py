@@ -9,6 +9,7 @@ extraction result is shown — a recorded replay must never be presented as a
 live parse (see docs/implementation-handoff-2026-09-10.md C1).
 """
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -39,8 +40,21 @@ class RecordedResponseClient:
     demo/offline paths stay deterministic without a network call.
     """
 
-    def __init__(self, responses: dict[str, dict] | None = None):
+    def __init__(self, responses: dict[str, dict] | None = None, responses_by_hash: dict[str, dict] | None = None):
         self._responses = responses if responses is not None else self._load_default()
+        # Content-addressed replays for every bundled scenario that has a
+        # recording (agent/packs/immigration/scenarios.py). A document is
+        # matched by the sha256 of its bytes, so a swapped file never gets
+        # another file's replay; the reference-id map is the fallback.
+        # An explicitly supplied reference-id map is the whole world for that
+        # client (tests use this to simulate a missing document); only the
+        # default client consults the on-disk scenario recordings.
+        if responses_by_hash is not None:
+            self._by_hash = responses_by_hash
+        elif responses is None:
+            self._by_hash = self._load_by_hash()
+        else:
+            self._by_hash = {}
 
     @staticmethod
     def _load_default() -> dict[str, dict]:
@@ -48,11 +62,32 @@ class RecordedResponseClient:
         data.pop("note", None)
         return data
 
+    @staticmethod
+    def _load_by_hash() -> dict[str, dict]:
+        from agent.packs.immigration.scenarios import recorded_responses_by_hash
+
+        return recorded_responses_by_hash()
+
     def converse(self, **kwargs):
+        image_bytes = _image_bytes_from_request(kwargs)
+        if image_bytes is not None:
+            digest = hashlib.sha256(image_bytes).hexdigest()
+            if digest in self._by_hash:
+                return {"output": {"message": {"content": [{"text": json.dumps(self._by_hash[digest])}]}}}
         document_name = _document_name_from_request(kwargs)
         if document_name not in self._responses:
             raise KeyError(f"no recorded response for document '{document_name}'")
         return {"output": {"message": {"content": [{"text": json.dumps(self._responses[document_name])}]}}}
+
+
+def _image_bytes_from_request(kwargs: dict) -> bytes | None:
+    for message in kwargs.get("messages", []):
+        for block in message.get("content", []):
+            source = (block.get("image") or block.get("document") or {}).get("source") or {}
+            data = source.get("bytes")
+            if isinstance(data, (bytes, bytearray)):
+                return bytes(data)
+    return None
 
 
 def _document_name_from_request(kwargs: dict) -> str:
