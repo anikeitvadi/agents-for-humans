@@ -18,9 +18,9 @@ Open the page and click **Load bundled sample & process** — this downloads the
 
 ## Screenshots
 
-| Case review after the full guided demo | The attorney draft, with approval | The recall pack on the live CPSC feed |
-|---|---|---|
-| ![Case review](docs/screenshots/case-review.png) | ![Attorney draft](docs/screenshots/attorney-draft.png) | ![Recall demo](docs/screenshots/recall.png) |
+| Upload → review, after the full guided demo | The attorney draft, with approval |
+|---|---|
+| ![Case review](docs/screenshots/case-review.png) | ![Attorney draft](docs/screenshots/attorney-draft.png) |
 
 ## What it does
 

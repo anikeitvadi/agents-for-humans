@@ -13,26 +13,26 @@
   <rect x="60" y="84" width="1080" height="108" rx="10" fill="#FFFFFF" stroke="#3A4652" stroke-width="1.5"/>
   <text x="76" y="106" font-size="12" font-weight="700" fill="#3A4652" letter-spacing="0.6">USER SURFACE · ui/index.html, served by FastAPI (agent/app.py)</text>
   <rect x="76" y="118" width="330" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
-  <text x="88" y="138" font-size="12.5" font-weight="600" fill="#10151B">Case review tab</text>
-  <text x="88" y="155" font-size="11.5" fill="#3A4652">Two document dates side by side, the day gap between</text>
-  <text x="88" y="170" font-size="11.5" fill="#3A4652">them, and a "Review attorney draft" side panel.</text>
+  <text x="88" y="138" font-size="12.5" font-weight="600" fill="#10151B">1 · Upload, 2 · Review</text>
+  <text x="88" y="155" font-size="11.5" fill="#3A4652">Three documents in (real upload, byte-verified), two dates</text>
+  <text x="88" y="170" font-size="11.5" fill="#3A4652">side by side, the gap, "Review attorney draft" + Approve.</text>
   <rect x="422" y="118" width="330" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
-  <text x="434" y="138" font-size="12.5" font-weight="600" fill="#10151B">Recall demo tab</text>
-  <text x="434" y="155" font-size="11.5" fill="#3A4652">One seeded receipt matched against the live CPSC feed.</text>
-  <text x="434" y="170" font-size="11.5" fill="#3A4652">One ping: refund or voucher. Labeled live vs. fallback.</text>
+  <text x="434" y="138" font-size="12.5" font-weight="600" fill="#10151B">3 · Ask the guardian</text>
+  <text x="434" y="155" font-size="11.5" fill="#3A4652">A Strands agent with five tools over the engine. Every</text>
+  <text x="434" y="170" font-size="11.5" fill="#3A4652">answer carries a decision trace: tool, input, mode, gate.</text>
   <rect x="768" y="118" width="356" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
-  <text x="780" y="138" font-size="12.5" font-weight="600" fill="#10151B">Status chip + activity feed</text>
-  <text x="780" y="155" font-size="11.5" fill="#3A4652">"Needs review" or "No new notification". Demo controls</text>
-  <text x="780" y="170" font-size="11.5" fill="#3A4652">simulate an upload or a scheduled poll firing.</text>
+  <text x="780" y="138" font-size="12.5" font-weight="600" fill="#10151B">4 · Bulletin watch + activity feed</text>
+  <text x="780" y="155" font-size="11.5" fill="#3A4652">Replay a captured month: September silent, October</text>
+  <text x="780" y="170" font-size="11.5" fill="#3A4652">surfaces. Live / recorded is labeled on every result.</text>
 
   <!-- API arrow -->
   <line x1="600" y1="192" x2="600" y2="232" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-  <text x="612" y="216" font-size="11" fill="#5B6773">JSON over HTTP · /api/sample-case · /api/process-sample-case · /api/bulletin-poll · /api/recalls/check · /api/gate-demo</text>
+  <text x="612" y="216" font-size="11" fill="#5B6773">JSON over HTTP · /api/process-documents · /api/bulletin-poll · /api/ask · /api/drafts/approve · /api/recalls/check · /api/reset</text>
 
   <!-- BUILT BAND -->
   <rect x="60" y="236" width="1080" height="440" rx="12" fill="none" stroke="#2E8C77" stroke-width="2"/>
   <rect x="76" y="226" width="318" height="20" fill="#F7F8F6"/>
-  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 123 tests pass with no AWS credentials</text>
+  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 180 tests pass with no AWS credentials</text>
 
   <!-- INPUTS -->
   <rect x="80" y="262" width="300" height="160" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
@@ -83,7 +83,7 @@
   <text x="844" y="334" font-size="11.5" fill="#10151B">is fixed text it cannot edit; absent or failing,</text>
   <text x="844" y="349" font-size="11.5" fill="#10151B">the core ships alone.</text>
   <text x="844" y="370" font-size="11.5" fill="#10151B"><tspan font-weight="600">Guardian:</tspan> "Ask the guardian" / {"prompt"}.</text>
-  <text x="844" y="385" font-size="11.5" fill="#10151B">Four tools, each a pack check on the same ledger.</text>
+  <text x="844" y="385" font-size="11.5" fill="#10151B">Five tools, each a pack check on the same ledger.</text>
   <text x="844" y="400" font-size="11.5" fill="#10151B">It may only call a tool and report the result.</text>
   <text x="844" y="415" font-size="11" fill="#8A6414">Recall draft is deterministic remedy text, no model.</text>
 
@@ -112,8 +112,8 @@
   <!-- Packs footer -->
   <rect x="80" y="596" width="1040" height="62" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
   <text x="94" y="617" font-size="12" font-weight="700" fill="#3A4652">DOMAIN PACKS · agent/packs/ · same engine, same gate, same ledger</text>
-  <text x="94" y="636" font-size="11.5" fill="#10151B"><tspan font-weight="600">immigration/</tspan>  rules.py · pipeline.py (sample case: extract → rule → gate → draft) · bulletin.py (unattended monthly poll off captured bulletins; Sep 2025 stays silent, Oct 2025 surfaces)</text>
-  <text x="94" y="652" font-size="11.5" fill="#10151B"><tspan font-weight="600">recalls/</tspan>  rules.py · feed.py (live CPSC, captured fallback) · pipeline.py. Deliberately thin: it proves the engine is generic, it is not a second headline.</text>
+  <text x="94" y="636" font-size="11.5" fill="#10151B"><tspan font-weight="600">immigration/</tspan>  rules.py · pipeline.py (uploaded case: verify → extract → rule → gate → draft; identity = hash of documents + extraction) · bulletin.py (monthly poll off captured bulletins)</text>
+  <text x="94" y="652" font-size="11.5" fill="#10151B"><tspan font-weight="600">recalls/</tspan>  rules.py · feed.py (live CPSC, captured fallback) · pipeline.py. Reachable via the guardian's check_recall tool and /api/recalls/check; proves the engine is generic.</text>
 
   <!-- PRODUCTION PATH BAND -->
   <rect x="60" y="704" width="1080" height="170" rx="12" fill="none" stroke="#8A97A3" stroke-width="1.5" stroke-dasharray="7 5"/>

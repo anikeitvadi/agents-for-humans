@@ -728,9 +728,13 @@ function renderResult(result) {
 
   const modeLabel = result.mode === 'live' ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
   setTopMeta(`Case review · ${modeLabel}`);
+  const reason = result.mode_reason || '';
+  const noCredentials = /no AWS credentials/i.test(reason);
   document.getElementById('mode-note').textContent = result.mode === 'live'
     ? 'Live Bedrock parse: your uploaded document pixels were read directly.'
-    : `No live AWS credentials in this environment — extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels. ${result.mode_reason || ''}`.trim();
+    : (noCredentials
+      ? 'No AWS credentials in this environment — extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels.'
+      : `Live Bedrock was unavailable, so extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels. ${reason}`.trim());
 
   const docList = document.getElementById('doc-list');
   docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map((key) => {

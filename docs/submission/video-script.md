@@ -10,9 +10,9 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 
 ## 0:35 – 1:45  Three documents → 55-day discrepancy → attorney draft → approval
 
-[Screen: UI, Case review tab, Demo controls open. Click Load sample case.]
+[Screen: UI, step 1 'Upload your documents'. Click Load bundled sample & process.]
 
-"Three synthetic documents: an I-94, an I-797, a passport. Bedrock extracts each date with the evidence it read it from." [Point at the Documents column: evidence strings.] "Note the label: this run is a recorded replay, and it says so. Every result in this product is labeled live or recorded."
+"Three synthetic documents: an I-94, an I-797, a passport. They go through the real upload endpoint, the same one your own files would. Bedrock reads each date and shows the evidence it read it from." [Point at the Extracted evidence column.] "Note the label at the top: Live Bedrock parse. Every result in this product is labeled live or recorded."
 
 "The engine compares the two dates. Fifty-five days apart. That clears the decision gate, so one thing surfaces: 'Your document dates differ by 55 days. Review this with your attorney.'"
 
@@ -34,7 +34,7 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 
 "October: USCIS switches to the Dates for Filing chart, the date is current, and the guardian pings once with a filing-window draft."
 
-[Click Load sample case again.]
+[Click Load bundled sample & process again.]
 
 "Now the important part. Run the document check again. Silent. Already flagged, draft still available. The ledger remembers what it already told you. Restraint is the feature."
 
@@ -48,13 +48,13 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 
 ## 3:35 – 4:05  The spine (architecture diagram)
 
-"Under the hood: one deterministic engine, two domain packs, the model at three edges. Extraction, draft intro, and the tool-calling guardian. The gate and the ledger are plain Python with 139 tests. The same pipeline is deployed on Amazon Bedrock AgentCore Runtime with logs and traces on."
+"Under the hood: one deterministic engine, two domain packs, the model at three edges. Extraction, draft intro, and the tool-calling guardian. The gate and the ledger are plain Python with 180 tests. The same pipeline is deployed on Amazon Bedrock AgentCore Runtime with logs and traces on."
 
 ## 4:05 – 4:20  Recall coda (15 seconds)
 
-[Recall demo tab. Click Run recall demo.]
+[Ask the guardian: "Is my speaker receipt affected by a recall?" The trace shows check_recall, feed_mode live.]
 
-"Same engine, different domain. A saved receipt against the live CPSC recall feed. One match, one ping: refund or voucher. The unmatched receipt stays silent. That's the proof the engine is generic; immigration is just the first pack."
+"Same engine, different domain. A saved receipt against the live CPSC recall feed, through the same agent. One match, one ping: refund or voucher. That's the proof the engine is generic; immigration is just the first pack."
 
 ## 4:20 – 4:30  Close
 
@@ -63,6 +63,6 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 ## Recording checklist
 
 - `rm -f data/demo.db` before recording, or press Reset demo.
-- Open Demo controls once before recording starts.
+- Record on a machine whose AWS account has Bedrock access, so the label reads Live Bedrock parse.
 - Terminal ready with `agentcore invoke '{"prompt": "Do my documents disagree? I-94 2026-11-03, I-797 2026-12-28"}'`.
 - Keep the live/recorded label in frame whenever extraction is on screen.
