@@ -734,7 +734,7 @@ function renderResult(result) {
     ? 'Live Bedrock parse: your uploaded document pixels were read directly.'
     : (noCredentials
       ? 'No AWS credentials in this environment — extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels.'
-      : `Live Bedrock was unavailable, so extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels. ${reason}`.trim());
+      : `Live Bedrock was unavailable (${reason.replace(/^live Bedrock extraction unavailable \((.*)\); replaying the recorded response$/, '$1')}), so extraction replays a recorded response tied to the known sample documents, not a live read of arbitrary pixels.`);
 
   const docList = document.getElementById('doc-list');
   docList.replaceChildren(...['admit_until', 'i797_valid_until', 'passport_expiry'].map((key) => {
@@ -809,7 +809,7 @@ document.getElementById('view-docs-btn').addEventListener('click', () => {
 document.getElementById('process-btn').addEventListener('click', processDocuments);
 
 const loadBundledBtn = document.getElementById('load-bundled-btn');
-loadBundledBtn.addEventListener('click', () => runAction('Load bundled sample', loadBundledBtn, async () => {
+async function loadBundledSample() {
   for (const key of DOCUMENT_KEYS) {
     const blob = await fetchSampleBlob(key);
     const file = new File([blob], `sample-${key}.png`, { type: 'image/png' });
@@ -819,7 +819,8 @@ loadBundledBtn.addEventListener('click', () => runAction('Load bundled sample', 
     handleFileSelected(key, file);
   }
   await processDocuments();
-}));
+}
+loadBundledBtn.addEventListener('click', () => runAction('Load bundled sample', loadBundledBtn, loadBundledSample));
 
 // --- Ask the guardian (a Strands agent over the engine's checks) ---------
 
@@ -956,7 +957,7 @@ async function runGuidedDemo() {
   const demo = params.get('demo');
   if (!demo) return;
   await runAction('Guided demo', null, async () => {
-    if (demo === 'case' || demo === 'full') await loadBundledBtn.click();
+    if (demo === 'case' || demo === 'full') await loadBundledSample();
     if (demo === 'full') {
       await pollBulletin('2025-09', 'September 2025');
       await pollBulletin('2025-10', 'October 2025');
