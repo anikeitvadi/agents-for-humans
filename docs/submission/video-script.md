@@ -30,7 +30,7 @@ Target 4:30, hard cap 4:45 with one optional beat. Screen recording of the local
 
 [Click Approve for attorney review.]
 
-"Approve for attorney review. That writes a receipt on this clock, event, and rule version. Nothing is sent; there's no mail transport in this build and the UI never pretends there is."
+"Approve for attorney review. That writes a receipt on this clock, event, and rule version. Nothing is sent unless a verified email sender is configured, and the panel says which it is."
 
 [If it fails on camera: extraction falling back shows the top bar as Recorded replay and a Mode line under the upload; say "Bedrock is unreachable right now, so the same check ran on the recorded extraction, and the label says so." If the drawer does not open, click the "Document review" row under Monitoring activity; it opens the same draft.]
 
@@ -82,7 +82,8 @@ Target 4:30, hard cap 4:45 with one optional beat. Screen recording of the local
 
 ## Recording checklist
 
-- `rm -f data/demo.db` before recording, or press Reset demo.
+- `rm -f data/demo.db` before recording, or press Reset demo, well before you hit record: the first run after a reset retries live Bedrock before failing over (about 20 s on an account without model access).
+- Title and closing cards: slides 1 and 11 of `docs/submission/deck.html` (or pages 1 and 11 of `deck.pdf`); the architecture card is slide 9.
 - Record on a machine whose AWS account has Bedrock access, so the top-bar label reads Live Bedrock.
 - Start at the very top of the page (the opening scene) at 1920×1080; the page has no external fonts or scripts, so nothing needs to preload.
 - Terminal ready with `agentcore invoke '{"prompt": "Do my documents disagree? I-94 2026-11-03, I-797 2026-12-28"}'`.
