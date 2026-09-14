@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Guardian thumbnail</title>
+<style>
+  :root { --limestone: #E5E3D8; --gold: #B89A6A; --ink: #20211E; --muted: #5B5C57; --hair: rgba(32,33,30,.18);
+    --serif: "Iowan Old Style", Baskerville, "Times New Roman", serif; --sans: Inter, "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace; }
+  html, body { margin: 0; width: 1200px; height: 800px; overflow: hidden; background: var(--limestone); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  .card { position: relative; width: 1200px; height: 800px; overflow: hidden; }
+  .backdrop { position: absolute; inset: 0;
+    background:
+      radial-gradient(110% 62% at 50% 104%, rgba(184,154,106,.46) 0%, rgba(184,154,106,.14) 38%, rgba(184,154,106,0) 66%),
+      radial-gradient(56% 48% at 16% 6%, rgba(130,144,139,.30) 0%, rgba(130,144,139,0) 72%),
+      radial-gradient(64% 54% at 86% 14%, rgba(242,240,232,.95) 0%, rgba(242,240,232,0) 70%),
+      linear-gradient(180deg, #ECEAE0 0%, #E5E3D8 52%, #D9D6C9 100%); }
+  .backdrop::before { content: ""; position: absolute; inset: 0; background-image: repeating-linear-gradient(180deg, rgba(32,33,30,.05) 0 1px, transparent 1px 28px);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.9) 45%, rgba(0,0,0,.35) 100%); mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.9) 45%, rgba(0,0,0,.35) 100%); }
+  .backdrop::after { content: ""; position: absolute; inset: 0; opacity: .55; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
+  .horizon { position: absolute; left: 0; right: 0; top: 64%; height: 1px; background: rgba(32,33,30,.14); }
+  .frame { position: absolute; inset: 48px 72px; border-left: 1px solid var(--hair); border-right: 1px solid var(--hair); padding: 36px 48px; display: flex; flex-direction: column; }
+  .eyebrow { font: 500 15px/1.4 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .top { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
+  .mark { width: 16px; height: 16px; border: 1.5px solid var(--ink); position: relative; display: inline-block; vertical-align: middle; margin-right: 12px; }
+  .mark::after { content: ""; position: absolute; inset: 4px; background: var(--gold); }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .serif { font: italic 400 46px/1.1 var(--serif); letter-spacing: -.01em; }
+  .word { font: 500 236px/.92 var(--sans); letter-spacing: -.05em; margin: 10px 0 0 -10px; }
+  .lede { font-size: 27px; line-height: 1.4; color: var(--muted); max-width: 30ch; margin-top: 28px; }
+  .ribbon { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; border-top: 1px solid var(--hair); padding-top: 18px; }
+  .ribbon > div { padding-right: 24px; }
+  .ribbon > div + div { border-left: 1px solid var(--hair); padding-left: 24px; }
+  .num { font: 400 44px/1 var(--serif); letter-spacing: -.02em; }
+  .num em { font-size: .5em; color: var(--muted); margin-left: .25em; }
+  .lab { display: block; margin-top: 8px; }
+  .fine { font-size: 15px; color: var(--muted); max-width: 26ch; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="backdrop"></div>
+  <div class="horizon"></div>
+  <div class="frame">
+    <div class="top">
+      <span class="eyebrow"><span class="mark"></span>Immigration Status Guardian</span>
+      <span class="eyebrow">AWS Agents for Humans · Strands · Bedrock AgentCore</span>
+    </div>
+    <div class="body">
+      <p class="serif" style="margin:0">Immigration paperwork,</p>
+      <div class="word">Guardian</div>
+      <p class="lede" style="margin-bottom:0">Compares the dates on your documents, watches the Visa Bulletin, and interrupts you exactly once.</p>
+    </div>
+    <div class="ribbon">
+      <div><span class="eyebrow">The sample scenario</span><p class="fine" style="margin:6px 0 0">Facts from the bundled sample case, not product statistics.</p></div>
+      <div><span class="num">3</span><span class="eyebrow lab">Documents</span></div>
+      <div><span class="num">55<em>days</em></span><span class="eyebrow lab">Discrepancy</span></div>
+      <div><span class="num">1</span><span class="eyebrow lab">Decision surfaced</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
