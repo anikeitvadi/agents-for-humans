@@ -170,7 +170,7 @@ aws lambda invoke --function-name guardian-unattended-check --payload '{"month":
 The same pipeline runs on Amazon Bedrock AgentCore Runtime through `deploy/agentcore_entrypoint.py`, with no engine or pack logic changed. Deployed 2026-09-11 as a direct code deploy (no container), observability on (CloudWatch logs and X-Ray traces), memory off:
 
 ```
-arn:aws:bedrock-agentcore:us-east-1:654654285440:runtime/immigration_status_guardian-SCAdbeBj6Z
+arn:aws:bedrock-agentcore:us-east-1:<account>:runtime/immigration_status_guardian-SCAdbeBj6Z
 ```
 
 Payloads: `{"prompt": "Do my documents disagree?"}` asks the guardian agent (it picks and runs a tool, then answers with a decision trace); `{}` runs the sample case with recorded extraction; `{"extraction": "live"}` runs live Bedrock extraction; `{"fields": {...}}` skips extraction and runs the rule on the given dates. Verified in the cloud: the first invoke surfaces the 55-day gap with an attorney draft, the second is silent and returns the same draft.
@@ -241,7 +241,7 @@ mode_reason=live Bedrock extraction unavailable (ValidationException: Error 002:
 **AgentCore Runtime, deployed and invoked** (`agentcore invoke '{}'` twice, real output, abbreviated):
 
 ```
-arn:aws:bedrock-agentcore:us-east-1:654654285440:runtime/immigration_status_guardian-SCAdbeBj6Z
+arn:aws:bedrock-agentcore:us-east-1:<account>:runtime/immigration_status_guardian-SCAdbeBj6Z
 #1 {"path": "sample_case", "extraction_mode": "recorded", "alert": {"decision": "surfaced", "reason": "passed materiality, actionability, window, novelty"}, "draft": {"subject": "Document review needed: Sample Case — H-1B, I-94 cut to passport expiry", "used_llm_personalization": false, ...}}
 #2 {"path": "sample_case", "extraction_mode": "recorded", "alert": {"decision": "silent", "reason": "failed: novelty"}, "draft": {...same draft...}}
 ```
