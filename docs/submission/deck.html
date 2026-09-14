@@ -156,7 +156,9 @@
     html, body { overflow: visible; height: auto; background: #fff; }
     .viewport { position: static; display: block; }
     .stage { transform: none !important; width: 1920px; height: auto; }
-    .slide { display: block; position: relative; width: 1920px; height: 1080px; page-break-after: always; break-after: page; }
+    .slide { display: block; position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+    .slide + .slide { page-break-before: always; break-before: page; }
+    .counter { display: none; }
     .slide.is-active .frame { animation: none; }
     .hint { display: none; }
   }
