@@ -7,7 +7,7 @@
   <rect width="1200" height="900" fill="#F7F8F6"/>
 
   <text x="60" y="40" font-size="21" font-weight="700" fill="#10151B">Immigration Status Guardian · architecture</text>
-  <text x="60" y="62" font-size="13" fill="#5B6773">One deterministic engine, two domain packs. The model works at three edges: extracting document fields, writing the intro of an attorney draft it cannot otherwise edit, and the guardian agent, whose only tools are the engine's checks.</text>
+  <text x="60" y="62" font-size="13" fill="#5B6773"><tspan x="60" dy="0">One deterministic engine, two domain packs. The model works at three edges: extracting document fields, writing the intro of an attorney draft it cannot</tspan><tspan x="60" dy="16">otherwise edit, and the guardian agent, whose only tools are the engine's checks.</tspan></text>
 
   <!-- USER SURFACE -->
   <rect x="60" y="84" width="1080" height="108" rx="10" fill="#FFFFFF" stroke="#3A4652" stroke-width="1.5"/>

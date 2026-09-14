@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Immigration Status Guardian</title>
+<meta name="description" content="Pitch deck for the AWS Agents for Humans submission: the problem, who it is for, why it matters, what the agent does, and how it is built.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' fill='%23E5E3D8' stroke='%2320211E' stroke-width='2'/%3E%3Crect x='10' y='10' width='12' height='12' fill='%23B89A6A'/%3E%3C/svg%3E">
+<style>
+  /* Same system as ui/index.html: four section themes, hairline frames,
+     mono labels, serif italic phrase over a large sans headline. The deck
+     commits to one visual world per slide and paints every color. */
+  :root {
+    --charcoal: #1B1C1A; --limestone: #E5E3D8; --paper: #F2F0E8; --sage: #82908B; --sage-light: #A9B5B0;
+    --slate: #53615F; --gold: #B89A6A; --gold-light: #D4BA85; --gold-ink: #6B5530; --ink: #20211E; --ink-light: #F5F3EA;
+    --serif: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+    --sans: Inter, "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+    --radius: 6px;
+  }
+  .theme-limestone, .theme-paper { color: var(--ink); --muted: #5B5C57; --hair: rgba(32,33,30,.16); --hair-strong: rgba(32,33,30,.34);
+    --surface: rgba(32,33,30,.035); --accent: var(--gold); --accent-text: var(--gold-ink); --quiet: var(--sage); --quiet-text: var(--slate);
+    --accent-wash: rgba(184,154,106,.16); --quiet-wash: rgba(130,144,139,.16); --btn-fill: var(--charcoal); --btn-ink: var(--ink-light); }
+  .theme-limestone { background: var(--limestone); --section-bg: var(--limestone); }
+  .theme-paper { background: var(--paper); --section-bg: var(--paper); }
+  .theme-slate, .theme-charcoal { color: var(--ink-light); --muted: rgba(245,243,234,.78); --hair: rgba(245,243,234,.18); --hair-strong: rgba(245,243,234,.36);
+    --surface: rgba(245,243,234,.05); --accent: var(--gold-light); --accent-text: var(--ink-light); --quiet: var(--sage-light); --quiet-text: var(--ink-light);
+    --accent-wash: rgba(212,186,133,.14); --quiet-wash: rgba(169,181,176,.12); --btn-fill: var(--paper); --btn-ink: var(--ink); }
+  .theme-slate { background: var(--slate); --section-bg: var(--slate); }
+  .theme-charcoal { background: var(--charcoal); --section-bg: var(--charcoal); }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--charcoal); color: var(--ink-light); font: 16px/1.5 var(--sans); overflow: hidden;
+    -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, p, ul, ol { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+
+  /* Stage: a fixed 1920×1080 canvas scaled to fit the window */
+  .viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+  .stage { width: 1920px; height: 1080px; position: relative; transform-origin: center center; }
+  .slide { position: absolute; inset: 0; display: none; }
+  .slide.is-active { display: block; }
+  .frame { position: absolute; inset: 72px 120px; border-left: 1px solid var(--hair); border-right: 1px solid var(--hair); padding: 56px 72px; display: flex; flex-direction: column; }
+  .slide-top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 22px; border-bottom: 1px solid var(--hair); }
+  .slide-foot { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; gap: 32px; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0; min-height: 0; }
+
+  /* Type roles */
+  .eyebrow { font: 500 15px/1.4 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .serif { font: italic 400 56px/1.1 var(--serif); letter-spacing: -.01em; }
+  .headline { font: 500 96px/1.0 var(--sans); letter-spacing: -.035em; text-wrap: balance; max-width: 14ch; }
+  .headline.small { font-size: 72px; max-width: 18ch; }
+  .lede { font-size: 28px; line-height: 1.45; color: var(--muted); max-width: 46ch; }
+  .copy { font-size: 24px; line-height: 1.5; max-width: 52ch; }
+  .copy.muted { color: var(--muted); }
+  .source { font: 15px/1.5 var(--mono); color: var(--muted); }
+  .fig { font: 400 200px/.86 var(--serif); letter-spacing: -.045em; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .fig.mid { font-size: 132px; }
+  .fig-unit { font: italic 400 34px/1.2 var(--serif); color: var(--muted); }
+  .mark { display: inline-block; width: 12px; height: 12px; border: 1px solid currentColor; vertical-align: middle; flex: none; }
+  .mark.on { background: var(--accent); border-color: var(--accent); }
+  .mark.ring { border-radius: 50%; border-color: var(--quiet); }
+
+  /* Buttons drawn like the product's */
+  .btn { display: inline-flex; align-items: center; gap: 14px; font: 500 17px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    padding: 20px 28px; border-radius: var(--radius); border: 1px solid transparent; }
+  .btn-primary { background: var(--btn-fill); color: var(--btn-ink); }
+  .btn-hairline { border-color: var(--hair-strong); }
+
+  /* Layout helpers */
+  .cols { display: grid; gap: 0; border: 1px solid var(--hair); border-radius: var(--radius); overflow: hidden; }
+  .cols > * { padding: 36px 40px; min-width: 0; }
+  .cols > * + * { border-left: 1px solid var(--hair); }
+  .cols.three { grid-template-columns: repeat(3, 1fr); }
+  .cols.two { grid-template-columns: 1fr 1fr; }
+  .stack { display: flex; flex-direction: column; gap: 18px; }
+  .row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .split { display: grid; grid-template-columns: 1.05fr 1fr; gap: 80px; align-items: center; }
+  .rule { border-top: 1px solid var(--hair); }
+
+  /* Slide 1 backdrop, same recipe as the product hero */
+  .backdrop { position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(110% 62% at 50% 104%, rgba(184,154,106,.46) 0%, rgba(184,154,106,.14) 38%, rgba(184,154,106,0) 66%),
+      radial-gradient(56% 48% at 16% 6%, rgba(130,144,139,.30) 0%, rgba(130,144,139,0) 72%),
+      radial-gradient(64% 54% at 86% 14%, rgba(242,240,232,.95) 0%, rgba(242,240,232,0) 70%),
+      linear-gradient(180deg, #ECEAE0 0%, var(--limestone) 52%, #D9D6C9 100%); }
+  .backdrop::before { content: ""; position: absolute; inset: 0; background-image: repeating-linear-gradient(180deg, rgba(32,33,30,.05) 0 1px, transparent 1px 28px);
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.9) 45%, rgba(0,0,0,.35) 100%); -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.9) 45%, rgba(0,0,0,.35) 100%); }
+  .backdrop::after { content: ""; position: absolute; inset: 0; opacity: .55; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
+  .horizon { position: absolute; left: 0; right: 0; top: 64%; height: 1px; background: rgba(32,33,30,.14); }
+
+  /* Document panels + connector (slides 2 and 4) */
+  .comparison { display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: center; }
+  .doc { border: 1px solid var(--hair-strong); border-radius: var(--radius); padding: 28px 32px; background: var(--surface); }
+  .doc .eyebrow { margin-bottom: 14px; display: block; }
+  .doc .date { font: 500 44px/1.1 var(--mono); letter-spacing: -.01em; }
+  .doc .evidence { font: 18px/1.5 var(--mono); color: var(--muted); margin-top: 12px; }
+  .connector { position: relative; height: 60px; }
+  .connector::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: currentColor; opacity: .55; }
+  .gap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 12px;
+    font: 500 16px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; padding: 12px 18px; border: 1px solid var(--hair-strong);
+    border-radius: var(--radius); background: var(--section-bg); white-space: nowrap; }
+  .gap::before { content: ""; width: 12px; height: 12px; background: var(--accent); }
+
+  /* Gate strip */
+  .chip { display: inline-flex; align-items: center; gap: 14px; font: 500 16px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+    padding: 12px 18px 12px 14px; border: 1px solid var(--hair-strong); border-radius: var(--radius); }
+  .chip.review { color: var(--accent-text); border-color: var(--accent); }
+  .chip.quiet { color: var(--quiet-text); border-color: var(--quiet); }
+  .gate { display: flex; flex-wrap: wrap; gap: 14px 36px; font: 500 16px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  .gate span { display: inline-flex; align-items: center; gap: 12px; }
+  .gate .off { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--hair-strong); }
+
+  /* Trace */
+  .trace { border-top: 1px solid var(--hair); }
+  .trace-step { display: grid; grid-template-columns: 48px 1fr; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--hair); font-size: 22px; line-height: 1.5; }
+  .trace-num { font: 17px/1.5 var(--mono); color: var(--muted); padding-top: 6px; }
+  .tool { font: 500 20px var(--mono); }
+  .pill { display: inline-block; font: 500 14px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 7px 10px;
+    border: 1px solid var(--hair-strong); border-radius: 4px; margin-left: 12px; color: var(--muted); vertical-align: 2px; }
+  .pill.surfaced { border-color: var(--accent); color: var(--accent-text); }
+  .trace-summary { display: block; color: var(--muted); margin-top: 6px; font-size: 20px; }
+
+  /* Tables and lists */
+  table { border-collapse: collapse; width: 100%; font-size: 21px; line-height: 1.45; }
+  th { text-align: left; font: 500 15px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 0 24px 14px 0; border-bottom: 1px solid var(--hair-strong); }
+  td { padding: 16px 24px 16px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  td:first-child { font-weight: 500; white-space: nowrap; }
+  .status { font: 500 14px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; padding: 7px 10px; border: 1px solid var(--hair-strong); border-radius: 4px; white-space: nowrap; }
+  .status.real { border-color: var(--quiet); color: var(--quiet-text); }
+  .status.rec { border-color: var(--accent); color: var(--accent-text); }
+  .list { display: flex; flex-direction: column; }
+  .list li { display: grid; grid-template-columns: 200px 1fr; gap: 32px; padding: 22px 0; border-top: 1px solid var(--hair); font-size: 23px; line-height: 1.45; }
+  .list li:last-child { border-bottom: 1px solid var(--hair); }
+  .list .k { font: 500 15px/1.6 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); padding-top: 6px; }
+  .never { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .never > div { border-left: 1px solid var(--gold); padding: 6px 0 6px 20px; font: italic 400 30px/1.25 var(--serif); }
+
+  /* Architecture */
+  .arch { flex: 1; min-height: 0; display: grid; place-items: center; }
+  .arch svg { width: auto; height: 100%; max-width: 100%; }
+
+  /* Chrome: counter and hint, outside the frame */
+  .counter { position: absolute; right: 120px; bottom: 30px; font: 500 14px/1 var(--mono); letter-spacing: .12em; color: var(--muted); }
+  .hint { position: absolute; left: 120px; bottom: 30px; font: 500 14px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); opacity: .8; }
+  .slide.is-active .frame { animation: settle .35s ease-out; }
+  @keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .slide.is-active .frame { animation: none; } }
+
+  /* Print: one slide per page at 1920×1080 */
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { overflow: visible; height: auto; background: #fff; }
+    .viewport { position: static; display: block; }
+    .stage { transform: none !important; width: 1920px; height: auto; }
+    .slide { display: block; position: relative; width: 1920px; height: 1080px; page-break-after: always; break-after: page; }
+    .slide.is-active .frame { animation: none; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="viewport">
+<div class="stage" id="stage">
+
+  <!-- 1 · Title -->
+  <section class="slide theme-limestone is-active" data-title="Title">
+    <div class="backdrop" aria-hidden="true"></div>
+    <div class="horizon" aria-hidden="true"></div>
+    <div class="frame">
+      <div class="slide-top">
+        <span class="eyebrow">AWS Agents for Humans · Everyday Agents track</span>
+        <span class="eyebrow">Strands Agents SDK · Amazon Bedrock AgentCore</span>
+      </div>
+      <div class="body">
+        <p class="serif">Immigration paperwork</p>
+        <h1 class="headline" style="margin-top: 18px">Immigration Status Guardian</h1>
+        <p class="lede" style="margin-top: 36px">One engine that reads the government so you don't have to. It compares the dates on your documents, watches the Visa Bulletin, and interrupts you exactly once.</p>
+      </div>
+      <div class="slide-foot">
+        <span class="eyebrow">Anikeit Vadi · Darshan Hari</span>
+        <span class="eyebrow">github.com/anikeitvadi/agents-for-humans</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · The problem -->
+  <section class="slide theme-paper" data-title="The problem">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">The problem</span><span class="eyebrow">Two agencies, two dates, one that counts</span></div>
+      <div class="body">
+        <div class="split">
+          <div class="stack" style="gap: 28px">
+            <p class="serif">The approval notice in your drawer says twenty months.</p>
+            <h2 class="headline small">The record that governs your stay says fifty-five days.</h2>
+            <p class="copy muted">CBP stamps an admit-until date on your I-94 when you land. USCIS prints a different date on your I-797. If your passport expires first, CBP cuts the I-94 to the passport, and nothing tells you.</p>
+            <p class="source">"The 'Admit Until Date' is the date that the traveler's immigration status expires in the U.S." · CBP, I-94 Expiration Dates fact sheet, Pub. 0326-0715</p>
+          </div>
+          <div class="stack" style="gap: 28px">
+            <div class="doc"><span class="eyebrow">Form I-797 · Valid until</span><span class="date">2026-12-28</span><div class="evidence">Valid To: 12/28/2026</div></div>
+            <div class="connector" style="height: 80px"><span class="gap">55 days</span></div>
+            <div class="doc"><span class="eyebrow">Form I-94 · Admit until</span><span class="date">2026-11-03</span><div class="evidence">Admit Until Date: 11/03/2026 · equals the passport expiry</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Sample scenario, synthetic documents</span><span class="eyebrow">Not legal advice</span></div>
+    </div>
+  </section>
+
+  <!-- 3 · Who it's for, why it matters -->
+  <section class="slide theme-limestone" data-title="Who and why">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Who it's for · Why it matters</span><span class="eyebrow">Every figure cited in the README</span></div>
+      <div class="body">
+        <div class="cols three">
+          <div class="stack">
+            <span class="fig mid">1.2M<span style="font-size: .5em">+</span></span>
+            <p class="copy">Indian nationals in the EB-1, EB-2, and EB-3 backlog. Long waits, many documents, many clocks.</p>
+            <p class="source">NFAP analysis of USCIS data as of Nov 2, 2023, via Boundless (Mar 2025)</p>
+          </div>
+          <div class="stack">
+            <span class="fig mid">12<span style="font-size: .5em">×</span></span>
+            <p class="copy">Every month USCIS designates which of two Visa Bulletin charts applies. A filing window can open on one bulletin and close on the next.</p>
+            <p class="source">USCIS, Adjustment of Status Filing Charts from the Visa Bulletin</p>
+          </div>
+          <div class="stack">
+            <span class="fig mid">1</span>
+            <p class="copy">Date that actually governs the stay: the I-94's admit-until, which a passport that expires first silently shortens.</p>
+            <p class="source">CBP fact sheet; University of Kansas HR, Understanding Your Status Expiration</p>
+          </div>
+        </div>
+        <p class="copy muted" style="margin-top: 40px">For H-1B and H-4 holders, international students and workers, families in the employment-based backlog, and the attorneys who field their "is this normal?" emails.</p>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Decision support</span><span class="eyebrow">Never a status or eligibility determination</span></div>
+    </div>
+  </section>
+
+  <!-- 4 · What it does -->
+  <section class="slide theme-slate" data-title="What it does">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">What it does</span><span class="eyebrow">Three documents in · one flag out · then quiet</span></div>
+      <div class="body">
+        <div class="row" style="gap: 28px; margin-bottom: 10px">
+          <span class="chip review"><span class="mark on"></span>Needs review</span>
+          <div class="gate"><span><span class="mark on"></span>Material</span><span><span class="mark on"></span>Actionable</span><span><span class="mark on"></span>Window open</span><span><span class="mark on"></span>Novel</span></div>
+        </div>
+        <div class="row" style="align-items: baseline; gap: 32px">
+          <span class="fig">55</span>
+          <span class="fig-unit" style="max-width: 16ch">days between the governing dates</span>
+        </div>
+        <h2 class="headline small" style="margin-top: 26px; font-size: 56px; max-width: 30ch">Your document dates differ by 55 days. Review this with your attorney.</h2>
+        <div class="comparison" style="margin-top: 44px; max-width: 1400px">
+          <div class="doc"><span class="eyebrow">Form I-94 · Admit until</span><span class="date">2026-11-03</span></div>
+          <div class="connector"><span class="gap">55 days</span></div>
+          <div class="doc"><span class="eyebrow">Form I-797 · Valid until</span><span class="date">2026-12-28</span></div>
+        </div>
+        <div class="row" style="margin-top: 40px; gap: 36px">
+          <span class="btn btn-primary"><span class="mark" style="width: 16px; height: 11px; border-radius: 1px"></span>Review attorney draft</span>
+          <span class="btn btn-hairline">Approve for attorney review →</span>
+          <span class="source">Approval writes a receipt on this clock, event, and rule version. Nothing is sent unless a verified SES sender is configured.</span>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Real upload through the same endpoint your own files would use</span><span class="eyebrow">Every result labeled Live Bedrock or Recorded replay</span></div>
+    </div>
+  </section>
+
+  <!-- 5 · Restraint is the feature -->
+  <section class="slide theme-slate" data-title="Restraint">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Restraint is the feature</span><span class="eyebrow">Deterministic decision gate · SQLite ledger</span></div>
+      <div class="body">
+        <div class="split" style="grid-template-columns: 1fr 1.1fr">
+          <div class="stack" style="gap: 30px">
+            <h2 class="headline small">An event surfaces only if all four hold.</h2>
+            <p class="copy muted">Material, actionable, inside its window, and not already surfaced for this clock, event, and rule version. Everything else updates the ledger silently. A replay, a restart, or a second upload of the same documents never produces a second ping.</p>
+            <p class="source">agent/engine/decision_gate.py · store.py UNIQUE(clock_id, event_id, rule_version)</p>
+          </div>
+          <div class="list">
+            <li><span class="k">First run</span><div><div class="gate"><span><span class="mark on"></span>Material</span><span><span class="mark on"></span>Actionable</span><span><span class="mark on"></span>Window open</span><span><span class="mark on"></span>Novel</span></div><p class="copy muted" style="margin-top: 12px">Surfaced. One draft, one ping.</p></div></li>
+            <li><span class="k">Same documents again</span><div><div class="gate"><span><span class="mark on"></span>Material</span><span><span class="mark on"></span>Actionable</span><span><span class="mark on"></span>Window open</span><span class="off"><span class="mark"></span>Novel</span></div><p class="copy muted" style="margin-top: 12px">Silent. Already flagged, the same draft is still available.</p></div></li>
+            <li><span class="k">September bulletin</span><div><span class="chip quiet"><span class="mark ring"></span>Stayed quiet</span><p class="copy muted" style="margin-top: 12px">Priority date not yet current for the seeded case.</p></div></li>
+            <li><span class="k">October bulletin</span><div><span class="chip review"><span class="mark on"></span>Surfaced</span><p class="copy muted" style="margin-top: 12px">USCIS switches to the Dates for Filing chart; the date is current. One filing-window draft. Run it again: silent.</p></div></li>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Plain Python · 204 offline tests</span><span class="eyebrow">No model in this path</span></div>
+    </div>
+  </section>
+
+  <!-- 6 · The model at three edges -->
+  <section class="slide theme-paper" data-title="Three edges">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">How it's built</span><span class="eyebrow">The model works at three edges, the decision lives in code</span></div>
+      <div class="body">
+        <div class="cols three">
+          <div class="stack">
+            <span class="eyebrow">Edge 1 · Read</span>
+            <h3 class="headline small" style="font-size: 44px">Extraction with evidence</h3>
+            <p class="copy muted">Amazon Bedrock Converse reads each document. Every field returns with the exact text it was read from and a status: extracted, missing, or ambiguous. Anything unsure blocks the rule; no arithmetic runs on a guess.</p>
+            <p class="source">agent/llm/extract.py</p>
+          </div>
+          <div class="stack">
+            <span class="eyebrow">Edge 2 · Draft</span>
+            <h3 class="headline small" style="font-size: 44px">An intro around a fixed core</h3>
+            <p class="copy muted">A Strands Agent writes only the opening of the attorney message. The dates and the flag are fixed text it cannot edit; if the model is absent or fails, the core ships alone.</p>
+            <p class="source">agent/llm/draft.py</p>
+          </div>
+          <div class="stack">
+            <span class="eyebrow">Edge 3 · Ask</span>
+            <h3 class="headline small" style="font-size: 44px">A guardian with five tools</h3>
+            <p class="copy muted">A Strands Agent whose only tools are the engine's checks, on the same ledger the UI uses. It may call a tool and report the result. It never computes dates or decides status itself.</p>
+            <p class="source">agent/llm/guardian.py</p>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 40px; justify-content: space-between">
+          <p class="copy">Between the edges: a deterministic engine. Schema, rules, decision gate, ledger. Plain Python, 204 offline tests, five live ones.</p>
+          <span class="eyebrow">agent/engine/ · agent/packs/</span>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Strands Agents SDK</span><span class="eyebrow">Amazon Bedrock Converse, multimodal documents</span></div>
+    </div>
+  </section>
+
+  <!-- 7 · Ask the guardian -->
+  <section class="slide theme-charcoal" data-title="Ask the guardian">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Ask the guardian</span><span class="eyebrow">Execution facts, never chain of thought</span></div>
+      <div class="body">
+        <p class="serif" style="color: var(--muted)">When something needs a second look,</p>
+        <h2 class="headline" style="margin-top: 10px">Ask the guardian.</h2>
+        <div class="trace" style="margin-top: 44px; max-width: 1500px">
+          <div class="trace-step"><span class="trace-num">0</span><span>Request: My I-94 says 2026-11-03 and my I-797 says 2026-12-28. Do they disagree?</span></div>
+          <div class="trace-step"><span class="trace-num">1</span><span><span class="tool">check_document_dates</span>(admit_until=2026-11-03, i797_valid_until=2026-12-28)<span class="pill">ok</span><span class="pill">mode: live</span><span class="pill surfaced">gate: surfaced</span><span class="pill">draft persisted</span><span class="trace-summary">The I-94 and I-797 dates disagree by 55 days · passed materiality, actionability, window, novelty</span></span></div>
+        </div>
+        <div class="row" style="margin-top: 36px; gap: 14px">
+          <span class="pill" style="margin: 0">check_document_dates</span><span class="pill" style="margin: 0">run_sample_case_check</span><span class="pill" style="margin: 0">check_uploaded_case</span><span class="pill" style="margin: 0">check_visa_bulletin</span><span class="pill" style="margin: 0">check_recall</span>
+          <span class="source" style="margin-left: 12px">One agent per session; follow-ups build on the last result, and each trace covers only the new turn.</span>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">POST /api/ask · {"prompt": …} on the AgentCore Runtime</span><span class="eyebrow">Read straight from the Strands message history</span></div>
+    </div>
+  </section>
+
+  <!-- 8 · Honest by construction -->
+  <section class="slide theme-limestone" data-title="Honest by construction">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Honest by construction</span><span class="eyebrow">What is real, what is recorded</span></div>
+      <div class="body">
+        <div class="split" style="grid-template-columns: 1.25fr 1fr; align-items: start">
+          <table>
+            <thead><tr><th>Piece</th><th>Status</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Document upload</td><td><span class="status real">Real</span></td><td>Your bytes go through the endpoint; every file is decoded and validated before any model call.</td></tr>
+              <tr><td>Extraction</td><td><span class="status real">Live</span> <span class="status rec">Recorded</span></td><td>Live Bedrock with model access; otherwise a byte-verified recording, and the page says which.</td></tr>
+              <tr><td>Visa Bulletin</td><td><span class="status rec">Captured</span></td><td>September and October 2025 with the USCIS chart designation. travel.state.gov blocks automated fetching.</td></tr>
+              <tr><td>CPSC recall feed</td><td><span class="status real">Live</span></td><td>Public API with a captured fallback. Backend and tests; the engine is generic.</td></tr>
+              <tr><td>AgentCore Runtime</td><td><span class="status real">Deployed</span></td><td>Invoked in the cloud: surfaced once, silent on repeat. Prompt path awaits a redeploy.</td></tr>
+              <tr><td>Unattended run</td><td><span class="status rec">Scripted</span></td><td>EventBridge → Lambda → Runtime → one SNS ping. Provisioning script in the repo.</td></tr>
+            </tbody>
+          </table>
+          <div class="stack" style="gap: 28px">
+            <span class="eyebrow">What it never says</span>
+            <div class="never" style="grid-template-columns: 1fr">
+              <div>"You are in status."</div>
+              <div>"You are safe to travel."</div>
+              <div>"File this."</div>
+            </div>
+            <p class="copy muted">Every output is a flag for the attorney. Status math, grace periods, and unlawful-presence bars are deferred on purpose: a confident wrong answer here does real damage.</p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Failure is visible, never silent</span><span class="eyebrow">mode and mode_reason on every response</span></div>
+    </div>
+  </section>
+
+  <!-- 9 · Architecture -->
+  <section class="slide theme-paper" data-title="Architecture">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Architecture</span><span class="eyebrow">Built today · production path</span></div>
+      <div class="arch"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3A4652"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="900" fill="#F7F8F6"/>
+
+  <text x="60" y="40" font-size="21" font-weight="700" fill="#10151B">Immigration Status Guardian · architecture</text>
+  <text x="60" y="62" font-size="13" fill="#5B6773"><tspan x="60" dy="0">One deterministic engine, two domain packs. The model works at three edges: extracting document fields, writing the intro of an attorney draft it cannot</tspan><tspan x="60" dy="16">otherwise edit, and the guardian agent, whose only tools are the engine's checks.</tspan></text>
+
+  <!-- USER SURFACE -->
+  <rect x="60" y="84" width="1080" height="108" rx="10" fill="#FFFFFF" stroke="#3A4652" stroke-width="1.5"/>
+  <text x="76" y="106" font-size="12" font-weight="700" fill="#3A4652" letter-spacing="0.6">USER SURFACE · ui/index.html, served by FastAPI (agent/app.py)</text>
+  <rect x="76" y="118" width="330" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="88" y="138" font-size="12.5" font-weight="600" fill="#10151B">1 · Upload, 2 · Review</text>
+  <text x="88" y="155" font-size="11.5" fill="#3A4652">Three documents in (real upload, byte-verified), two dates</text>
+  <text x="88" y="170" font-size="11.5" fill="#3A4652">side by side, the gap, "Review attorney draft" + Approve.</text>
+  <rect x="422" y="118" width="330" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="434" y="138" font-size="12.5" font-weight="600" fill="#10151B">3 · Ask the guardian</text>
+  <text x="434" y="155" font-size="11.5" fill="#3A4652">A Strands agent with five tools over the engine. Every</text>
+  <text x="434" y="170" font-size="11.5" fill="#3A4652">answer carries a decision trace: tool, input, mode, gate.</text>
+  <rect x="768" y="118" width="356" height="60" rx="6" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="780" y="138" font-size="12.5" font-weight="600" fill="#10151B">4 · Bulletin watch + activity feed</text>
+  <text x="780" y="155" font-size="11.5" fill="#3A4652">Replay a captured month: September silent, October</text>
+  <text x="780" y="170" font-size="11.5" fill="#3A4652">surfaces. Live / recorded is labeled on every result.</text>
+
+  <!-- API arrow -->
+  <line x1="600" y1="192" x2="600" y2="232" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <text x="612" y="216" font-size="11" fill="#5B6773">JSON over HTTP · /api/process-documents · /api/bulletin-poll · /api/ask · /api/drafts/approve · /api/recalls/check · /api/reset</text>
+
+  <!-- BUILT BAND -->
+  <rect x="60" y="236" width="1080" height="440" rx="12" fill="none" stroke="#2E8C77" stroke-width="2"/>
+  <rect x="76" y="226" width="318" height="20" fill="#F7F8F6"/>
+  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 204 tests pass with no AWS credentials</text>
+
+  <!-- INPUTS -->
+  <rect x="80" y="262" width="300" height="160" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
+  <text x="94" y="283" font-size="12" font-weight="700" fill="#3A4652">INPUTS · fixtures/</text>
+  <text x="94" y="304" font-size="11.5" fill="#10151B">• Document specimens: synthetic I-94, I-797,</text>
+  <text x="104" y="319" font-size="11.5" fill="#10151B">passport PNGs (invented identity, real format)</text>
+  <text x="94" y="340" font-size="11.5" fill="#10151B">• Visa Bulletin, Sep + Oct 2025 (EB2-India), paired</text>
+  <text x="104" y="355" font-size="11.5" fill="#10151B">with the USCIS chart designation for each month</text>
+  <text x="94" y="376" font-size="11.5" fill="#10151B">• CPSC SaferProducts API, live and unauthenticated,</text>
+  <text x="104" y="391" font-size="11.5" fill="#10151B">with a captured real recall as the fallback</text>
+  <text x="94" y="412" font-size="11.5" fill="#10151B">• One seeded receipt, one seeded bulletin case</text>
+
+  <!-- EXTRACTION -->
+  <rect x="80" y="446" width="300" height="130" rx="8" fill="#FFF8EA" stroke="#C99A3C"/>
+  <text x="94" y="467" font-size="12" font-weight="700" fill="#8A6414">EXTRACTION · agent/llm/extract.py</text>
+  <text x="94" y="488" font-size="11.5" fill="#10151B">Bedrock Converse, multimodal document blocks.</text>
+  <text x="94" y="505" font-size="11.5" fill="#10151B">Every field carries evidence and a status:</text>
+  <text x="94" y="520" font-size="11.5" fill="#10151B">extracted / missing / ambiguous. Anything unsure</text>
+  <text x="94" y="535" font-size="11.5" fill="#10151B">forces needs_review; the rule never runs on it.</text>
+  <text x="94" y="558" font-size="11" fill="#8A6414">mode: live (AWS creds present) or recorded (fixture replay)</text>
+
+  <!-- ENGINE -->
+  <rect x="410" y="262" width="390" height="314" rx="8" fill="#FFFFFF" stroke="#2E8C77" stroke-width="1.5"/>
+  <text x="424" y="283" font-size="12" font-weight="700" fill="#2E8C77">DETERMINISTIC ENGINE · agent/engine/ · no model in this path</text>
+  <rect x="424" y="296" width="362" height="34" rx="5" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="436" y="317" font-size="11.5" fill="#10151B"><tspan font-weight="600">schema.py</tspan>  validate the event and the extracted fields</text>
+  <line x1="605" y1="330" x2="605" y2="344" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="424" y="346" width="362" height="62" rx="5" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="436" y="366" font-size="11.5" fill="#10151B"><tspan font-weight="600">packs/*/rules.py</tspan>  evaluate</text>
+  <text x="436" y="382" font-size="11" fill="#3A4652">immigration: I-94 vs I-797 date gap (pure arithmetic); bulletin</text>
+  <text x="436" y="397" font-size="11" fill="#3A4652">cutoff, only against the USCIS-designated chart. recalls: exact match.</text>
+  <line x1="605" y1="408" x2="605" y2="422" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="424" y="424" width="362" height="62" rx="5" fill="#E6F4F0" stroke="#2E8C77"/>
+  <text x="436" y="444" font-size="11.5" fill="#10151B"><tspan font-weight="600">decision_gate.py</tspan>  surface only if all four hold</text>
+  <text x="436" y="460" font-size="11" fill="#3A4652">material · actionable · window still open · not already surfaced</text>
+  <text x="436" y="475" font-size="11" fill="#3A4652">for this clock, event, and rule version. Otherwise: silent.</text>
+  <line x1="605" y1="486" x2="605" y2="500" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="424" y="502" width="362" height="62" rx="5" fill="#EEF2F5" stroke="#C7D0D8"/>
+  <text x="436" y="522" font-size="11.5" fill="#10151B"><tspan font-weight="600">store.py</tspan>  SQLite ledger: alerts + drafts</text>
+  <text x="436" y="538" font-size="11" fill="#3A4652">UNIQUE(clock_id, event_id, rule_version): replay and restart safe.</text>
+  <text x="436" y="553" font-size="11" fill="#3A4652">A "ready" draft is sticky; a surfaced alert is never downgraded.</text>
+
+  <!-- DRAFTING -->
+  <rect x="830" y="262" width="290" height="160" rx="8" fill="#FFF8EA" stroke="#C99A3C"/>
+  <text x="844" y="283" font-size="11.5" font-weight="700" fill="#8A6414">STRANDS AGENTS · draft.py · guardian.py</text>
+  <text x="844" y="304" font-size="11.5" fill="#10151B"><tspan font-weight="600">Drafting:</tspan> the agent writes only the intro of</text>
+  <text x="844" y="319" font-size="11.5" fill="#10151B">the attorney message. The safety-boundary core</text>
+  <text x="844" y="334" font-size="11.5" fill="#10151B">is fixed text it cannot edit; absent or failing,</text>
+  <text x="844" y="349" font-size="11.5" fill="#10151B">the core ships alone.</text>
+  <text x="844" y="370" font-size="11.5" fill="#10151B"><tspan font-weight="600">Guardian:</tspan> "Ask the guardian" / {"prompt"}.</text>
+  <text x="844" y="385" font-size="11.5" fill="#10151B">Five tools, each a pack check on the same ledger.</text>
+  <text x="844" y="400" font-size="11.5" fill="#10151B">It may only call a tool and report the result.</text>
+  <text x="844" y="415" font-size="11" fill="#8A6414">Recall draft is deterministic remedy text, no model.</text>
+
+  <!-- OUTPUT -->
+  <rect x="830" y="446" width="290" height="130" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
+  <text x="844" y="467" font-size="12" font-weight="700" fill="#3A4652">OUTCOMES back to the UI</text>
+  <text x="844" y="488" font-size="11.5" fill="#10151B"><tspan font-weight="600" fill="#2E8C77">surfaced</tspan>  one ping, draft persisted</text>
+  <text x="844" y="508" font-size="11.5" fill="#10151B"><tspan font-weight="600">silent</tspan>  ledger updated, no new ping; any</text>
+  <text x="844" y="523" font-size="11.5" fill="#10151B">existing ready draft is returned unchanged</text>
+  <text x="844" y="543" font-size="11.5" fill="#10151B"><tspan font-weight="600" fill="#8A6414">error</tspan>  extraction blocked, no date math run</text>
+  <text x="844" y="563" font-size="11" fill="#5B6773">Every response carries mode: live | recorded | fallback</text>
+
+  <!-- arrows inside built band -->
+  <line x1="380" y1="342" x2="410" y2="342" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="383" y="336" font-size="9.5" fill="#5B6773">feeds</text>
+  <line x1="230" y1="422" x2="230" y2="446" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="238" y="438" font-size="9.5" fill="#5B6773">document bytes</text>
+  <line x1="380" y1="510" x2="410" y2="510" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="383" y="504" font-size="9.5" fill="#5B6773">fields</text>
+  <line x1="800" y1="342" x2="830" y2="342" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="801" y="336" font-size="9.5" fill="#5B6773">surfaced</text>
+  <line x1="975" y1="422" x2="975" y2="446" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="800" y1="533" x2="830" y2="533" stroke="#3A4652" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="803" y="527" font-size="9.5" fill="#5B6773">silent</text>
+
+  <!-- Packs footer -->
+  <rect x="80" y="596" width="1040" height="62" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>
+  <text x="94" y="617" font-size="12" font-weight="700" fill="#3A4652">DOMAIN PACKS · agent/packs/ · same engine, same gate, same ledger</text>
+  <text x="94" y="636" font-size="11.5" fill="#10151B"><tspan font-weight="600">immigration/</tspan>  rules.py · pipeline.py (uploaded case: verify → extract → rule → gate → draft; identity = hash of documents + extraction) · bulletin.py (monthly poll off captured bulletins)</text>
+  <text x="94" y="652" font-size="11.5" fill="#10151B"><tspan font-weight="600">recalls/</tspan>  rules.py · feed.py (live CPSC, captured fallback) · pipeline.py. Reachable via the guardian's check_recall tool and /api/recalls/check; proves the engine is generic.</text>
+
+  <!-- PRODUCTION PATH BAND -->
+  <rect x="60" y="704" width="1080" height="170" rx="12" fill="none" stroke="#8A97A3" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <rect x="76" y="694" width="400" height="20" fill="#F7F8F6"/>
+  <text x="84" y="709" font-size="12" font-weight="700" fill="#5B6773" letter-spacing="0.6">PRODUCTION PATH · Runtime is built; the rest is design only</text>
+  <rect x="80" y="728" width="245" height="128" rx="8" fill="#E6F4F0" stroke="#2E8C77" stroke-width="1.5"/>
+  <text x="94" y="749" font-size="12" font-weight="700" fill="#2E8C77">AgentCore Runtime · DEPLOYED</text>
+  <text x="94" y="769" font-size="11" fill="#3A4652">deploy/agentcore_entrypoint.py runs the</text>
+  <text x="94" y="784" font-size="11" fill="#3A4652">same pipeline. Direct code deploy, logs</text>
+  <text x="94" y="799" font-size="11" fill="#3A4652">and traces on. Invoked in the cloud:</text>
+  <text x="94" y="814" font-size="11" fill="#3A4652">surfaced once, then silent on repeat.</text>
+  <rect x="345" y="728" width="245" height="128" rx="8" fill="#FFFFFF" stroke="#C7D0D8" stroke-dasharray="4 3"/>
+  <text x="359" y="749" font-size="12" font-weight="700" fill="#3A4652">Gateway + Scheduler</text>
+  <text x="359" y="769" font-size="11" fill="#3A4652">Feeds (USCIS, Federal Register, DOS,</text>
+  <text x="359" y="784" font-size="11" fill="#3A4652">CPSC) as MCP tools with brokered auth.</text>
+  <text x="359" y="804" font-size="11" fill="#3A4652">EventBridge cron invokes the unattended</text>
+  <text x="359" y="819" font-size="11" fill="#3A4652">polls that the demo buttons simulate today.</text>
+  <rect x="610" y="728" width="245" height="128" rx="8" fill="#FFFFFF" stroke="#C7D0D8" stroke-dasharray="4 3"/>
+  <text x="624" y="749" font-size="12" font-weight="700" fill="#3A4652">Memory + Identity</text>
+  <text x="624" y="769" font-size="11" fill="#3A4652">Long-term: a user's clocks, documents,</text>
+  <text x="624" y="784" font-size="11" fill="#3A4652">preferences, ping history.</text>
+  <text x="624" y="804" font-size="11" fill="#3A4652">Cognito-issued JWT per user; today the</text>
+  <text x="624" y="819" font-size="11" fill="#3A4652">demo is single-tenant on local SQLite.</text>
+  <rect x="875" y="728" width="245" height="128" rx="8" fill="#FFFFFF" stroke="#C7D0D8" stroke-dasharray="4 3"/>
+  <text x="889" y="749" font-size="12" font-weight="700" fill="#3A4652">Policy + Observability</text>
+  <text x="889" y="769" font-size="11" fill="#3A4652">Cedar gates on any tool that drafts or</text>
+  <text x="889" y="784" font-size="11" fill="#3A4652">sends on the user's behalf.</text>
+  <text x="889" y="804" font-size="11" fill="#3A4652">OTEL traces to CloudWatch across the</text>
+  <text x="889" y="819" font-size="11" fill="#3A4652">Runtime and Gateway.</text>
+</svg>
+</div>
+      <div class="slide-foot"><span class="eyebrow">docs/architecture.svg</span><span class="eyebrow">One engine, two packs, the model at three edges</span></div>
+    </div>
+  </section>
+
+  <!-- 10 · Deployed and next -->
+  <section class="slide theme-slate" data-title="Deployed and next">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Deployed · What's next</span><span class="eyebrow">Amazon Bedrock AgentCore</span></div>
+      <div class="body">
+        <div class="cols two">
+          <div class="stack" style="gap: 24px">
+            <span class="eyebrow">Running in the cloud</span>
+            <h3 class="headline small" style="font-size: 48px">AgentCore Runtime, direct code deploy</h3>
+            <p class="copy muted">The same pipeline through one entrypoint, CloudWatch logs and X-Ray traces on. Invoked twice: the first call surfaces the 55-day gap with a draft, the second is silent and returns the same draft.</p>
+            <p class="copy muted">Two deploy breaks fixed on the way: dependencies resolved from a root requirements file, and a source path that shipped the engine and fixtures with the entrypoint.</p>
+            <p class="source">deploy/agentcore_entrypoint.py · deploy/unattended/</p>
+          </div>
+          <div class="stack" style="gap: 24px">
+            <span class="eyebrow">Next, in order</span>
+            <div class="list">
+              <li><span class="k">Redeploy</span><div>Ship the guardian's prompt path to the Runtime.</div></li>
+              <li><span class="k">Schedule</span><div>Provision the unattended bulletin check: EventBridge → Lambda → Runtime → SNS.</div></li>
+              <li><span class="k">Scenarios</span><div>Record "dates agree" and "passport unreadable" so all three run offline.</div></li>
+              <li><span class="k">Platform</span><div>AgentCore Memory, Identity, Policy, and Gateway-brokered feeds.</div></li>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot"><span class="eyebrow">Everything shown exists in the repo today</span><span class="eyebrow">Nothing in the demo is faked</span></div>
+    </div>
+  </section>
+
+  <!-- 11 · Close -->
+  <section class="slide theme-charcoal" data-title="Close">
+    <div class="frame">
+      <div class="slide-top"><span class="eyebrow">Immigration Status Guardian</span><span class="eyebrow">AWS Agents for Humans</span></div>
+      <div class="body">
+        <p class="serif" style="color: var(--muted)">Everyone has clocks the government moves.</p>
+        <h2 class="headline" style="margin-top: 14px">This one watches them, and only speaks when there's a decision to make.</h2>
+      </div>
+      <div class="slide-foot">
+        <span class="eyebrow">github.com/anikeitvadi/agents-for-humans</span>
+        <span class="eyebrow">Anikeit Vadi · Darshan Hari · Not legal advice</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="hint" id="hint">← → to move · P to print</div>
+  <div class="counter" id="counter"></div>
+</div>
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var counter = document.getElementById('counter');
+  var current = 0;
+
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.background = getComputedStyle(slides[current]).backgroundColor;
+  }
+  function show(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, k) { s.classList.toggle('is-active', k === current); });
+    counter.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+    document.body.style.background = getComputedStyle(slides[current]).backgroundColor;
+    if (history.replaceState) history.replaceState(null, '', '#' + (current + 1));
+    document.title = 'Immigration Status Guardian · ' + slides[current].getAttribute('data-title');
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') { e.preventDefault(); show(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') { e.preventDefault(); show(current - 1); }
+    else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(slides.length - 1); }
+    else if (e.key === 'p' || e.key === 'P') { window.print(); }
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('a')) return;
+    show(e.clientX < window.innerWidth / 2 ? current - 1 : current + 1);
+  });
+  window.addEventListener('resize', fit);
+  var start = parseInt((location.hash || '#1').slice(1), 10);
+  show(isNaN(start) ? 0 : start - 1);
+  fit();
+  setTimeout(function () { document.getElementById('hint').style.opacity = '0'; }, 6000);
+})();
+</script>
+</body>
+</html>
