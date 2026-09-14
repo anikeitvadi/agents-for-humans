@@ -1,4 +1,4 @@
-# Clockwork — Architecture Spec
+# Immigration Status Guardian — Architecture Spec
 
 *One engine that reads the government so you don't have to.*
 
@@ -6,7 +6,7 @@
 **Build window:** 4 days, 2 people · **Submission:** Mon Sep 14, 5:00pm PT (target: submit by noon)
 **Modules shipped:** Immigration status guardian (flagship, full build) · Recall-to-remedy (thin generality proof, ~20% effort: one feed, one seeded receipt, one match, one ping)
 
-> Naming note: "Clockwork" is a placeholder — pick your own. The pitch line is *"everyone has clocks; missing one costs you your license, your coverage, or your right to stay. This agent runs them quietly and only talks to you when there's a real decision."*
+> Naming note: "Clockwork" was the working name while this spec was written; the product shipped as Immigration Status Guardian. The pitch line is *"everyone has clocks; missing one costs you your license, your coverage, or your right to stay. This agent runs them quietly and only talks to you when there's a real decision."*
 
 ---
 

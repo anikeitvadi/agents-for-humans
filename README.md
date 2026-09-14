@@ -2,23 +2,42 @@
 
 [![tests](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml/badge.svg)](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml)
 
-**One engine that reads the government so you don't have to.** Built for AWS "Agents for Humans" (Strands Agents SDK, Everyday track, due Sep 14, 2026), deployed on Amazon Bedrock AgentCore Runtime.
+**One engine that reads the government so you don't have to.** Built for AWS "Agents for Humans" (Strands Agents SDK, Everyday Agents track, due Sep 14, 2026), deployed on Amazon Bedrock AgentCore Runtime.
 
 If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. This agent reads the documents, compares the dates the way a paralegal would, and interrupts you exactly once: "Your document dates differ by 55 days. Review this with your attorney." Then it goes quiet, and keeps watching the Visa Bulletin for you.
 
 ![Immigration Status Guardian, opening screen](docs/screenshots/hero.png)
 
-## Quickstart (about a minute)
+## In sixty seconds
+
+**The problem.** The date on an approval notice is not the date that governs a visa holder's stay; the I-94 is, and CBP cuts it to the passport expiry when the passport runs out first ([CBP fact sheet](https://www.cbp.gov/sites/default/files/documents/502386%20-%20I-94%20Fact%20Sheet_OFO.pdf), [KU HR](https://humanresources.ku.edu/understanding-your-status-expiration)). Over 1.2 million Indian nationals sit in the employment-based backlog, each waiting on a monthly Visa Bulletin decision ([NFAP via Boundless](https://www.boundless.com/blog/1-million-indians-stuck-green-card-backlog)).
+
+**What the agent does.**
+- Reads the three documents, compares the governing dates, and surfaces one flag: "Your document dates differ by 55 days. Review this with your attorney."
+- Drafts the attorney message around a fixed safety core the model cannot edit; one click records an approval receipt.
+- Keeps watching the Visa Bulletin and pings once when a month actually changes the case. Repeats stay silent.
+
+**The demo path.** Run the sample case → 55 days → Review attorney draft → Approve → Replay September (stays quiet) → Replay October (surfaced) → Load bundled sample & process again (silent, draft kept). Or open `/?demo=full` and watch it run.
 
 ```bash
 git clone https://github.com/anikeitvadi/agents-for-humans.git && cd agents-for-humans
-python -m venv .venv && source .venv/bin/activate        # or: uv venv && uv pip install -e ".[dev]"
+python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest                                                    # 204 offline tests, no AWS needed
-uvicorn agent.app:app --reload                            # http://127.0.0.1:8000/
+pytest                          # 204 offline tests, no AWS needed
+uvicorn agent.app:app --reload  # http://127.0.0.1:8000/
 ```
 
-Open the page and click **Run the sample case** in the opening screen (or **Load bundled sample & process** in the upload section) — this downloads the three synthetic specimen images and sends them through the real upload endpoint, exactly as if you'd selected your own files with **Choose File** (there is no canned/simulated path). Then process again (silent, draft kept), **Replay September update** (silent), **Replay October update** (one ping). Or open `http://127.0.0.1:8000/?demo=full` to watch it run. No AWS credentials needed: without them extraction replays a recorded response verified against the known specimen bytes, and says so on screen.
+**What is real, what is recorded.**
+
+| Piece | Status |
+|---|---|
+| Document upload | Real. Your selected bytes go through `POST /api/process-documents`; every file is decoded and validated before any model call. |
+| Document extraction | Live Bedrock on an account with model access. Otherwise a recorded response, byte-verified against the bundled specimens, and the page says which: `Live Bedrock` or `Recorded replay`. |
+| Visa Bulletin | Captured September and October 2025 fixtures with the USCIS chart designation. travel.state.gov blocks automated fetching. |
+| CPSC recall feed | Live API call with a captured fallback. Backend and tests only; not in the primary UI. |
+| Guardian agent | Real Strands Agent with five tools. Needs Bedrock model access and reports an error on screen otherwise. |
+| AgentCore Runtime | Deployed and invoked 2026-09-11. Predates the upload flow and the `{"prompt": ...}` path; redeploy outstanding. |
+| Unattended run (EventBridge → Lambda → Runtime → SNS) | Scripted in `deploy/unattended/`, not yet provisioned. |
 
 ## Screenshots
 
@@ -26,14 +45,16 @@ Open the page and click **Run the sample case** in the opening screen (or **Load
 |---|---|
 | ![Case review](docs/screenshots/case-review.png) | ![Attorney draft](docs/screenshots/attorney-draft.png) |
 
+The page holds up at phone width too: `docs/screenshots/mobile-hero.png` and `docs/screenshots/mobile-review.png` are 390px captures of the opening scene and the review.
+
 ## What it does
 
 Flags a **document-date discrepancy** between a person's I-94 and I-797 (a common H-1B situation: CBP admits someone only until their passport expiry, which can be much earlier than what their approval notice says) and drafts a message for their attorney to review. It never states a lawful-status length, an unlawful-presence conclusion, or a filing recommendation — every output is framed as a flag for attorney review, not legal advice.
 
 A second, deliberately thin pack (`agent/packs/recalls/`) matches a live consumer-recall feed to a receipt, proving the same watch → evaluate → gate → surface engine works on an unrelated domain. It is demo-scope (exact match against one seeded receipt), not a general-purpose matcher — see "Known scope limits" below. Its backend, pipeline, and tests are fully present and exercised (`agent/packs/recalls/`, `tests/test_recall_pipeline.py`, `tests/test_recalls_rules.py`), but it is not surfaced in the primary UI, which tells one connected immigration story end to end (upload → review → attorney draft → ask the guardian → bulletin watch).
-## Who it's for
 
-H-1B holders and their attorneys, and international students/workers generally, whose status depends on documents issued by different agencies (CBP, USCIS) on different clocks that can silently disagree.
+**Who it's for.** H-1B holders and their attorneys, and international students and workers generally, whose status depends on documents issued by different agencies (CBP, USCIS) on different clocks that can silently disagree.
+
 ## Why it matters
 
 - **The I-94, not the approval notice, is the date that counts.** CBP's own fact sheet: "The 'Admit Until Date' is the date that the traveler's immigration status expires in the U.S." ([CBP, "I-94 Expiration Dates" fact sheet, Publication No. 0326-0715](https://www.cbp.gov/sites/default/files/documents/502386%20-%20I-94%20Fact%20Sheet_OFO.pdf)).
@@ -89,7 +110,7 @@ tests/    204 offline tests (rules, extraction, decision gate, bulletin poll,
 
 **The rules engine is deterministic Python, not an LLM judgment call.** The model is only ever called for two things: extracting fields from a document, and writing the plain-English wrapper around a rules-engine result it cannot alter. See `docs/architecture-spec.md` §4.2 for why this boundary is enforced in code rather than in a prompt.
 
-**The guardian agent** (`agent/llm/guardian.py`) is the conversational front door, in the UI ("Ask the guardian"), at `POST /api/ask`, and as the `{"prompt": ...}` payload on the AgentCore Runtime. It is a Strands Agent with five tools, each a thin wrapper over a pack function bound to the same ledger the UI uses: `check_document_dates`, `run_sample_case_check` (the bundled demo sample only), `check_uploaded_case` (the specific case the person just uploaded, bound to an explicit submission reference from that upload — never a silent rerun of the bundled sample), `check_visa_bulletin`, `check_recall`. Its system prompt forbids computing dates or stating status itself; it can only call a tool and report the result, and every answer lists the tools it called. A fresh agent runs per question, so requests are stateless. Tests drive the real Strands tool loop with a scripted model (`tests/scripted_model.py`), so none of this depends on Bedrock being reachable — and the same paths are also verified against live Bedrock (see Evidence).
+**The guardian agent** (`agent/llm/guardian.py`) is the conversational front door, in the UI ("Ask the guardian"), at `POST /api/ask`, and as the `{"prompt": ...}` payload on the AgentCore Runtime. It is a Strands Agent with five tools, each a thin wrapper over a pack function bound to the same ledger the UI uses: `check_document_dates`, `run_sample_case_check` (the bundled demo sample only), `check_uploaded_case` (the specific case the person just uploaded, bound to an explicit submission reference from that upload — never a silent rerun of the bundled sample), `check_visa_bulletin`, `check_recall`. Its system prompt forbids computing dates or stating status itself; it can only call a tool and report the result, and every answer lists the tools it called. One agent per browser session (a session id per page load, 30-minute expiry, rebuilt if the uploaded case changes), so a follow-up question builds on the previous tool result while the trace covers only the new turn. Tests drive the real Strands tool loop with a scripted model (`tests/scripted_model.py`), so none of this depends on Bedrock being reachable — and the same paths are also verified against live Bedrock (see Evidence).
 
 **Every uploaded case has its own immutable identity.** `run_case_from_documents` (`agent/packs/immigration/pipeline.py`) derives its ledger key from the *complete* extraction result — fields, evidence, statuses, mode, and a sha256 of each uploaded document — not from the extracted dates alone or a fixed placeholder id. Two different document sets that happen to extract the same dates get distinct identities; replaying the exact same documents deterministically retrieves the same draft and approval. The guardian, the approval endpoint, and the UI all read/write through this same derived reference.
 
@@ -99,9 +120,10 @@ tests/    204 offline tests (rules, extraction, decision gate, bulletin poll,
 
 **The decision trace.** Every guardian answer ships with structured execution facts read straight from the Strands message history: for each tool call, the tool, its input, the result status, the data mode, the deterministic gate decision and reason, and whether a draft was persisted. Never model reasoning.
 
-**One human action.** "Approve for attorney review" records an idempotent receipt (clock, event, rule version, action, timestamp) in the ledger. Nothing is sent; there is no mail transport and the UI never claims one.
+**One human action.** "Approve for attorney review" records an idempotent receipt (clock, event, rule version, action, timestamp) in the ledger. Nothing is sent unless a verified SES sender is configured, and the UI never claims a send it did not make; see "Approval delivery".
 
 **The decision gate** (`agent/engine/decision_gate.py`) is why the agent stays quiet: an event only surfaces if it's material, actionable, has an open window, and hasn't already been surfaced for the same event. Everything else updates the ledger silently.
+
 ## Sample scenarios
 
 Three bundled synthetic document sets, selectable in the upload section (`/api/scenarios`, `agent/packs/immigration/scenarios.py`):
@@ -140,6 +162,7 @@ aws lambda invoke --function-name guardian-unattended-check --payload '{"month":
 - **The demo only ever uploads synthetic specimens**, not real immigration documents — `fixtures/sample_case/specimens/` holds three synthetic images (invented identity and dates in the real I-94/I-797/passport format) and `recorded_extraction_response.json` is what Bedrock returned for them. The upload flow itself is real (your selected file's bytes are what get sent and extracted, not a canned replay); the specimens are what a judge should select so nobody uploads real immigration documents to a hackathon URL. With AWS credentials the same specimens go through live Bedrock extraction end to end (see Evidence).
 - **PNG only** for this build — the upload accepts and validates PNG images; JPEG/other formats are rejected with a controlled error rather than silently mis-labeled.
 - **The bulletin beat is a historical replay, not a live fetch.** travel.state.gov blocks automated fetching, so the September and October 2025 bulletins are captured fixtures; their provenance and corroborating sources are in `fixtures/bulletins/README.md`.
+
 ## AgentCore Runtime (deployed)
 
 **This deployment predates the upload-flow reconciliation below and has not been redeployed with it.** It reflects the sample-case-only code as it stood when deployed; `run_sample_case`'s signature and the guardian's tool set have since changed. Redeploying (`agentcore deploy`) with the current code is still outstanding — see HANDOFF.md.
@@ -164,6 +187,7 @@ agentcore invoke '{}'
 ```
 
 Notes: the toolkit resolves dependencies from the root `requirements.txt`, which exists only for that purpose. AWS now recommends the Node CLI (`npm install -g @aws/agentcore`); the Python toolkit still deploys. Draft personalization needs Bedrock model access on the account; without it the response carries `used_llm_personalization: false` and the deterministic core ships alone.
+
 ## Evidence
 
 **Live Bedrock, verified 2026-09-11 (after Anthropic's model use-case form cleared for the AWS account).** All three of the model-dependent pieces — document extraction (vision), the guardian agent, and draft personalization — were confirmed end to end against real Bedrock, not just the recorded fallback:
@@ -255,6 +279,7 @@ Direct code deploy, memory off, CloudWatch logs and X-Ray traces on. The `{"prom
 ## Production path (not built for this deadline)
 
 AgentCore Memory, Identity (Cognito), Policy (Cedar), Observability (OTEL), and Gateway-brokered auth for the external feeds are real requirements for shipping this beyond a demo — see `docs/architecture-spec.md` §4.6 for the design. AgentCore Runtime itself is deployed and verified (section above); the rest of this list is design only.
+
 ## Setup
 
 Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS credentials with Bedrock model access (used for document extraction and draft personalization even when running locally — this is not an AgentCore-only dependency).
@@ -266,9 +291,11 @@ pytest                             # 204 offline tests, no AWS credentials requi
 pytest -m live                     # 5 live tests: need Bedrock model access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```
+
 ## Pre-existing code
 
 None. All code in this repository was written new during the hackathon submission window (Aug 10–Sep 14, 2026).
+
 ## License
 
 MIT — see `LICENSE`.

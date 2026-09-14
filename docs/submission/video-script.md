@@ -1,12 +1,20 @@
 # Five-minute demo video script (draft)
 
-Target 4:30. Screen recording of the local UI plus one terminal window. Voiceover. No slides except the title and the architecture diagram.
+Target 4:30, hard cap 4:45 with one optional beat. Screen recording of the local UI plus one terminal window. Voiceover. No slides except the title and the architecture diagram.
 
-## 0:00 – 0:35  The problem (title card, then a still of the two documents)
+## 0:00 – 0:35  The problem, who it's for, why it matters (title card, then a still of the two documents)
 
-"If you live in the US on a visa, your life runs on dates from three agencies that don't talk to each other. CBP stamps an 'admit until' date on your I-94 when you land. USCIS prints a different date on your approval notice. If your passport expires first, CBP cuts your I-94 short and nothing tells you. The approval notice in your drawer says twenty months. The record that actually governs your stay says fifty-five days.
+[Text cue 1, lower third: THE PROBLEM · The I-94, not the approval notice, is the date that counts.]
 
-This is Immigration Status Guardian. It reads the documents, does the arithmetic, and interrupts you exactly once."
+"If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. CBP stamps an admit-until date on your I-94. USCIS prints a different date on your approval notice. If your passport expires first, CBP cuts the I-94 short, and nothing tells you."
+
+[Text cue 2: WHO IT'S FOR · H-1B and H-4 holders, students and workers on visas, and their attorneys.]
+
+"It's for anyone whose stay depends on paperwork from CBP, USCIS, and the State Department, and for their attorneys."
+
+[Text cue 3: WHY IT MATTERS · The notice says twenty months. The record that governs your stay says fifty-five days.]
+
+"Over a million people are in the employment-based backlog, waiting on a monthly bulletin. This is Immigration Status Guardian. It reads the documents, does the arithmetic, and interrupts you exactly once."
 
 ## 0:35 – 1:45  Three documents → 55-day discrepancy → attorney draft → approval
 
@@ -24,6 +32,8 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 
 "Approve for attorney review. That writes a receipt on this clock, event, and rule version. Nothing is sent; there's no mail transport in this build and the UI never pretends there is."
 
+[If it fails on camera: extraction falling back shows the top bar as Recorded replay and a Mode line under the upload; say "Bedrock is unreachable right now, so the same check ran on the recorded extraction, and the label says so." If the drawer does not open, click the "Document review" row under Monitoring activity; it opens the same draft.]
+
 ## 1:45 – 2:35  September stays silent, October surfaces, the repeat stays silent
 
 [Close the panel. Scroll to 03 Monitor. Click Replay September update; the September panel reads "Stayed quiet".]
@@ -38,15 +48,17 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 
 "Now the important part. Run the document check again. Silent. Already flagged, draft still available. The ledger remembers what it already told you. Restraint is the feature."
 
+[If it fails on camera: the bulletins are local fixtures, so a failure means the demo database; press Reset demo and replay September then October again. A panel reading "Needs review" shows the reason in its detail line; read it out rather than hiding it.]
+
 ## 2:35 – 3:35  Ask the guardian (Strands agent with tools, decision trace)
 
 [Type or pick: "My I-94 says 2026-11-03 and my I-797 says 2026-12-28. Do they disagree?"]
 
 "This is a Strands agent. Its only tools are the engine's five checks. It can't compute dates or decide status itself; it picks a tool, runs it, and reports the result. Under the answer is the decision trace: the tool it chose, the input it passed, the data mode, the gate decision, whether a draft was persisted. Execution facts, not chain of thought."
 
-[If Bedrock is still blocked at recording time: show the box's error state and say "Bedrock model access is pending on this account; the agent reports that instead of failing silently." Then show the terminal `agentcore invoke '{"prompt": ...}'` output from the README's Evidence section.]
+[If it fails on camera: the answer box shows the real error and the list of tools it would have used; say "Bedrock model access is blocked on this account, and the agent reports that instead of failing silently." Then show the `POST /api/ask` live output from the README's Evidence section in the terminal.]
 
-## Optional beats (only if the prerequisites landed; each adds about 15 seconds)
+## Optional beats (only if the prerequisites landed; each adds about 15 seconds; use at most one so the total stays under 4:45)
 
 - **Dates agree stays silent.** Needs the `matching` recording committed (`scripts/record_extraction.py --all`). Pick "Dates agree" in the Sample case picker, Load bundled sample & process: the figure reads 0, "the governing dates agree", no draft. "Silent on the first pass, not just on repeats."
 - **The ping arrives.** Needs the unattended run provisioned (`deploy/unattended/provision.sh`). Cut to the inbox: one SNS email for October, none for the repeat. "That is the unattended run: one email, once."
@@ -61,6 +73,8 @@ This is Immigration Status Guardian. It reads the documents, does the arithmetic
 [Ask the guardian: "Is my speaker receipt affected by a recall?" The trace shows check_recall, feed_mode live.]
 
 "Same engine, different domain. A saved receipt against the live CPSC recall feed, through the same agent. One match, one ping: refund or voucher. That's the proof the engine is generic; immigration is just the first pack."
+
+[If it fails on camera: the CPSC call falls back to the captured recall and the trace says so; say "live feed unreachable, captured fallback, labeled." If the guardian itself is blocked, cut this beat; the architecture card already names the second pack.]
 
 ## 4:20 – 4:30  Close
 

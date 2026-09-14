@@ -18,7 +18,7 @@ The obvious agent design is "give the model the documents and ask what's wrong."
 
 The result surfaces once, drafts the email, and goes quiet. For this audience, restraint is the product.
 
-Repo: [link]. Built with the Strands Agents SDK and Amazon Bedrock AgentCore.
+Repo: [link]. Built with the Strands Agents SDK and Amazon Bedrock AgentCore Runtime.
 
 ---
 
@@ -26,7 +26,7 @@ Repo: [link]. Built with the Strands Agents SDK and Amazon Bedrock AgentCore.
 
 Our Agents for Humans entry runs locally as a FastAPI app and in the cloud on Amazon Bedrock AgentCore Runtime. Same pipeline, one entrypoint file. Here's the honest deploy log.
 
-**What worked on the first try.** `agentcore configure` with direct code deploy, no container. It auto-created the execution role and S3 bucket, cross-compiled the dependencies for ARM64 with uv, uploaded a 55 MB bundle, and stood up the Runtime with CloudWatch logs and X-Ray traces on.
+**What worked on the first try.** `agentcore configure` with direct code deploy, no container. It auto-created the execution role and S3 bucket, built and uploaded the bundle, and stood up the Runtime with CloudWatch logs and X-Ray traces on.
 
 **Break one: the bundle shipped without the AgentCore SDK.** The toolkit resolves dependencies from the source root and, when it finds `pyproject.toml`, installs only the base dependencies. Our `bedrock-agentcore` dependency lived in an optional `[deploy]` extra. The container crashed on import. Fix: a `requirements.txt` at the repo root, which the toolkit prefers over `pyproject.toml`. Document why it exists or someone will delete it.
 
@@ -48,7 +48,7 @@ The Strands Agents SDK makes tools cheap: decorate a function, pass it to `Agent
 
 **The system prompt is a fence, not a persona.** Never compute or compare dates yourself. Never state whether someone is in status. When a tool says surfaced, say one thing needs review and a draft is ready. When it says silent, say nothing new needs attention and why. If the tools can't answer, say so.
 
-**A fresh agent per question.** Requests stay stateless and the tool calls attributed to an answer are exactly the ones made for it. We read them straight from the agent's message history, pair each `toolUse` with its `toolResult`, and return a decision trace: tool, input, status, mode, gate decision, persisted draft. Execution facts, never chain of thought.
+**One agent per session, one trace per turn.** The UI gives each page load a session id and the agent keeps its conversation, so "and the passport?" builds on the last tool result. The trace still covers only the new turn: we read the messages that turn added, pair each `toolUse` with its `toolResult`, and return tool, input, status, mode, gate decision, persisted draft. Execution facts, never chain of thought.
 
 **Testing without a model.** A small `Model` subclass plays a script of tool-use and text turns. Strands registers the real tools, runs the real loop, executes the real functions, and feeds real results back. Our tests assert the trace matches the actual tool calls. None of it needs Bedrock to be reachable, which mattered more than we expected.
 

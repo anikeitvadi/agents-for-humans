@@ -32,20 +32,11 @@ If it merges, the video gets stronger and the script changes in four places:
 
 If it does not merge by Saturday night, record on `main` exactly as the current script says, in recorded mode, and say so on screen.
 
-Recommendation: merge it Saturday morning after Ani clicks through it once. It passes 180 offline tests here, keeps the failover, trace, approval, and reset work intact, and turns the demo's weakest claim ("this would parse your documents") into a shown fact. One condition: keep the README's warning that this is a demo and nobody should upload real immigration documents to a shared deployment, and do not publish a public live link with upload enabled.
+Recommendation: merge it Saturday morning after Ani clicks through it once. It passes 204 offline tests here, keeps the failover, trace, approval, and reset work intact, and turns the demo's weakest claim ("this would parse your documents") into a shown fact. One condition: keep the README's warning that this is a demo and nobody should upload real immigration documents to a shared deployment, and do not publish a public live link with upload enabled.
 
-## Who does what (proposed)
+## Who does what
 
-| Owner | Task | When |
-|---|---|---|
-| Ani | Review and merge PR #2; run the click-through on the merged main | Sat AM |
-| Partner | Redeploy the Runtime from merged main with their account; capture `agentcore invoke '{"prompt": ...}'` output and a CloudWatch trace screenshot; paste into README Evidence | Sat AM |
-| Ani | Regenerate diagram and screenshots; update video script button names | Sat midday |
-| Partner | Rehearse the demo twice with a timer; record screen + voice | Sat PM |
-| Ani | Cut the video, add the title card and the diagram card; export | Sat PM / Sun AM |
-| Ani | Flip repo public, confirm MIT in About | Sun AM |
-| Both | Builder IDs; Devpost form filled from the description draft; upload video; publish three posts | Sun |
-| Both | Watch the video once more, submit by noon Monday | Mon AM |
+The day-by-day order lives in `HANDOFF.md` (resume block at the top) so it stays current.
 
 ## Recording setup
 

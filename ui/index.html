@@ -215,9 +215,10 @@
   input[type="file"]::file-selector-button:hover { border-color: currentColor; }
   input[type="file"]:disabled { opacity: 0.4; }
   .doc-slot-links { display: flex; gap: 16px; flex-wrap: wrap; }
-  .upload-preview { display: flex; align-items: center; gap: 10px; font: 12px var(--mono); color: var(--muted);
-    padding-top: 12px; border-top: 1px solid var(--hair); }
-  .upload-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: 3px; border: 1px solid var(--hair-strong); }
+  .upload-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font: 12px/1.4 var(--mono); color: var(--muted);
+    padding-top: 12px; border-top: 1px solid var(--hair); overflow-wrap: anywhere; }
+  .upload-preview img { width: 64px; height: 64px; object-fit: cover; object-position: top; border-radius: 3px; border: 1px solid var(--hair-strong);
+    background: #fff; }
 
   .process-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
   .process-status { font: 12px/1.4 var(--mono); color: var(--muted); }
@@ -240,8 +241,18 @@
   .status-chip.tone-quiet { color: var(--quiet-text); border-color: var(--quiet); }
   .status-chip.tone-routine { color: var(--muted); }
 
+  /* The four gate checks, read straight from the engine's reason string */
+  .gate-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; }
+  .gate-strip-caption { flex-basis: 100%; }
+  .gate-mark { display: inline-flex; align-items: center; gap: 8px; font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+  .gate-mark::before { content: ""; width: 8px; height: 8px; flex: none; border: 1px solid var(--accent); background: var(--accent); }
+  .gate-mark.is-failed { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--hair-strong); text-decoration-thickness: 1px; }
+  .gate-mark.is-failed::before { background: none; border-color: var(--hair-strong); }
+  .month-outcome .gate-strip { margin-top: 4px; gap: 6px 14px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
   .review-figure { display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap; margin: 26px 0 6px; }
-  .figure-number { font: 400 clamp(96px, 15vw, 196px)/0.86 var(--serif); letter-spacing: -0.045em; color: var(--accent); }
+  .figure-number { font: 400 clamp(96px, 15vw, 196px)/0.86 var(--serif); letter-spacing: -0.045em; color: var(--accent); font-variant-numeric: tabular-nums; }
   .figure-unit { font: italic 400 clamp(20px, 2.2vw, 30px)/1.2 var(--serif); color: var(--muted); max-width: 18ch; }
   .review-headline { font: 500 clamp(24px, 2.6vw, 34px)/1.15 var(--sans); letter-spacing: -0.02em; margin: 14px 0 0; max-width: 34ch; }
 
@@ -566,6 +577,7 @@
 
     <div class="review-loaded hidden" id="review-loaded">
       <div class="status-chip" id="review-status"></div>
+      <div class="gate-strip hidden" id="review-gate" aria-label="Decision gate result"></div>
       <div class="review-figure hidden" id="review-figure">
         <span class="figure-number" id="review-figure-number"></span>
         <span class="figure-unit" id="review-figure-unit"></span>
@@ -1034,7 +1046,7 @@ function renderPreview(key, file) {
   const img = document.createElement('img');
   img.src = URL.createObjectURL(file);
   img.alt = '';
-  preview.append(img, el('span', { text: file.name }));
+  preview.append(img, el('span', { className: 'upload-preview-name', text: file.name }));
   preview.classList.remove('hidden');
 }
 
@@ -1078,13 +1090,52 @@ DOCUMENT_KEYS.forEach((key) => {
   }));
 });
 
+// The engine's gate reason is one of two shapes (agent/engine/decision_gate.py):
+// "passed materiality, actionability, window, novelty" or
+// "failed: <comma-separated subset of those four>". Anything else is not
+// rendered as a strip — a fact we cannot parse is not shown as four ticks.
+const GATE_CHECKS = [
+  { key: 'materiality', label: 'Material' },
+  { key: 'actionability', label: 'Actionable' },
+  { key: 'window', label: 'Window open' },
+  { key: 'novelty', label: 'Novel' },
+];
+function parseGateReason(reason) {
+  if (typeof reason !== 'string') return null;
+  const failed = reason.match(/^failed:\s*(.*)$/);
+  if (failed) {
+    const names = new Set(failed[1].split(',').map((part) => part.trim()));
+    return GATE_CHECKS.map((check) => ({ ...check, passed: !names.has(check.key) }));
+  }
+  if (/^passed\b/.test(reason)) return GATE_CHECKS.map((check) => ({ ...check, passed: true }));
+  return null;
+}
+function renderGateStrip(container, reason, { caption = true } = {}) {
+  const marks = parseGateReason(reason);
+  container.replaceChildren();
+  if (!marks) { container.classList.add('hidden'); return false; }
+  if (caption) container.append(el('span', { className: 'eyebrow gate-strip-caption', text: 'Deterministic decision gate' }));
+  for (const mark of marks) {
+    const node = el('span', { className: `gate-mark${mark.passed ? '' : ' is-failed'}`, text: mark.label });
+    node.append(el('span', { className: 'sr-only', text: mark.passed ? ' passed' : ' failed' }));
+    container.append(node);
+  }
+  container.classList.remove('hidden');
+  return true;
+}
+
+let figureAnimation = 0; // bumped on every render so a superseded count-up stops
+
 function resetReviewSection() {
   // R7: unconditional reset run before every render — a prior error state
   // (or a prior successful load) must never leave stale display/text
   // behind for the next render, whichever branch it takes.
   document.getElementById('review-empty').classList.add('hidden');
   document.getElementById('review-loaded').classList.remove('hidden');
+  figureAnimation += 1;
   document.getElementById('review-figure').classList.add('hidden');
+  document.getElementById('review-gate').classList.add('hidden');
+  document.getElementById('review-gate').replaceChildren();
   document.getElementById('review-figure-number').textContent = '';
   document.getElementById('review-figure-unit').textContent = '';
   const comparison = document.getElementById('comparison');
@@ -1154,11 +1205,40 @@ function daysBetween(a, b) {
   return Math.round(Math.abs(tb - ta) / 86400000);
 }
 
+// The figure counts up once when it lands (about 900ms, ease-out, whole
+// numbers). Instant under prefers-reduced-motion. A timer guarantees the
+// final value even where animation frames are paused (a background tab).
 function setReviewFigure(number, unit) {
   const figure = document.getElementById('review-figure');
-  document.getElementById('review-figure-number').textContent = String(number);
+  const numberEl = document.getElementById('review-figure-number');
   document.getElementById('review-figure-unit').textContent = unit;
   figure.classList.remove('hidden');
+  const target = Number(number);
+  const token = ++figureAnimation;
+  if (reduceMotion || !Number.isFinite(target) || target <= 0 || typeof requestAnimationFrame !== 'function') {
+    numberEl.textContent = String(number);
+    return;
+  }
+  const duration = 900;
+  const start = performance.now();
+  numberEl.textContent = '0';
+  const settle = () => { if (token === figureAnimation) numberEl.textContent = String(number); };
+  const tick = (now) => {
+    if (token !== figureAnimation) return;
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    numberEl.textContent = String(Math.round(target * eased));
+    if (t < 1) requestAnimationFrame(tick); else settle();
+  };
+  requestAnimationFrame(tick);
+  setTimeout(settle, duration + 250);
+}
+
+function setHeroRunLabel(again) {
+  const button = document.getElementById('hero-run-btn');
+  const arrow = el('span', { className: 'arrow', text: '→' });
+  arrow.setAttribute('aria-hidden', 'true');
+  button.replaceChildren(document.createTextNode(again ? 'Run it again ' : 'Run the sample case '), arrow);
 }
 
 function renderResult(result) {
@@ -1202,6 +1282,8 @@ function renderResult(result) {
 
   const outcome = describeOutcome(result.alert.decision, !!result.draft);
   statusChip(document.getElementById('review-status'), outcome);
+  renderGateStrip(document.getElementById('review-gate'), result.alert.reason);
+  setHeroRunLabel(true);
 
   document.getElementById('date-admit_until').textContent = result.fields.admit_until;
   document.getElementById('date-i797_valid_until').textContent = result.fields.i797_valid_until;
@@ -1213,7 +1295,14 @@ function renderResult(result) {
     const gapText = days !== null ? `${days} days` : 'a discrepancy';
     document.getElementById('review-headline').textContent = `Your document dates differ by ${gapText}`;
     document.getElementById('comparison-gap').textContent = gapText;
-    document.getElementById('review-note').textContent = 'Review this discrepancy with your attorney.';
+    // When the extracted passport expiry equals the I-94 admit-until date,
+    // say so: that equality is the whole story of this scenario, and it is
+    // arithmetic on the extracted fields, not a judgment.
+    const passport = result.fields.passport_expiry;
+    const direction = result.fields.admit_until < result.fields.i797_valid_until ? 'before' : 'after';
+    document.getElementById('review-note').textContent = (days !== null && passport && passport === result.fields.admit_until)
+      ? `The I-94 admit-until date equals the passport expiry date (${passport}), ${days} days ${direction} the I-797 validity end. Review this discrepancy with your attorney.`
+      : 'Review this discrepancy with your attorney.';
     if (days !== null) setReviewFigure(days, 'days between the governing dates');
     const openBtn = document.getElementById('open-draft-btn');
     openBtn.replaceChildren(icon('mail'), document.createTextNode('Review attorney draft'));
@@ -1384,13 +1473,16 @@ askForm.addEventListener('submit', (e) => { e.preventDefault(); const q = askInp
 // Each month panel shows its own verdict after a replay, so "September
 // stays quiet, October surfaces" reads at a glance; the activity list in
 // the review section still gets the same row as before.
-function renderMonthOutcome(month, tone, verdict, detail) {
+function renderMonthOutcome(month, tone, verdict, detail, gateReason) {
   const panel = document.getElementById(`month-${month}`);
   const outcome = document.getElementById(`month-outcome-${month}`);
   if (!panel || !outcome) return;
   panel.classList.remove('is-review', 'is-quiet', 'is-routine');
   panel.classList.add(`is-${tone}`);
   outcome.replaceChildren(el('span', { className: `month-verdict tone-${tone}`, text: verdict }), el('span', { className: 'month-detail', text: detail }));
+  const strip = el('div', { className: 'gate-strip' });
+  strip.setAttribute('aria-label', 'Decision gate result');
+  if (renderGateStrip(strip, gateReason, { caption: false })) outcome.append(strip);
   outcome.classList.remove('hidden');
 }
 
@@ -1414,7 +1506,7 @@ async function pollBulletin(month, label) {
   });
   const verdict = result.alert.decision === 'surfaced' ? 'Surfaced' : 'Stayed quiet';
   renderMonthOutcome(month, outcome.tone, verdict,
-    `${result.case_name} · priority date ${result.priority_date} ${cutoffPlain} · ${outcome.label}`);
+    `${result.case_name} · priority date ${result.priority_date} ${cutoffPlain} · ${outcome.label}`, result.alert.reason);
 }
 
 async function showGateDemo() {

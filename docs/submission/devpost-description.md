@@ -6,32 +6,48 @@ Track: Everyday Agents. Built with the Strands Agents SDK, deployed on Amazon Be
 
 **One engine that reads the government so you don't have to.**
 
+### Inspiration
+
+If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. CBP stamps an admit-until date on your I-94; USCIS prints a different date on your approval notice. If your passport expires first, CBP cuts the I-94 short and nothing tells you. The notice says twenty months; the record that governs your stay says fifty-five days. Over 1.2 million Indian nationals wait in the employment-based backlog on a monthly Visa Bulletin decision.
+
 ### What it does
 
-If you live in the United States on a visa, your life runs on dates issued by agencies that don't talk to each other. Customs and Border Protection stamps an "admit until" date on your I-94 when you enter. USCIS prints a different validity date on your I-797 approval notice. If your passport expires first, CBP cuts the I-94 short, and nothing tells you. The approval notice in your drawer says you have twenty months. The record that actually governs your stay says fifty-five days.
+It reads the three documents, compares the governing dates, and surfaces exactly one thing: "Your document dates differ by 55 days. Review this with your attorney." It drafts the message. You approve it. Then it goes quiet.
 
-Immigration Status Guardian reads the documents, compares the dates the way an attorney's paralegal would on day one, and surfaces exactly one thing: "Your document dates differ by 55 days. Review this with your attorney." It drafts the message to the attorney. You approve it. Then it goes quiet.
+It keeps watching. September's Visa Bulletin changes nothing for the sample case, so it stays silent. October's moves the case to current, so it pings once with a filing-window draft. Run the check again: silent.
 
-It also watches the world for you. Every month the State Department publishes the Visa Bulletin and USCIS decides which of its two charts applies. The guardian replays that check unattended: September's bulletin changes nothing, so it stays silent. October's bulletin moves the case to "current," so it pings once with a filing-window draft. Run the same check again and it stays silent. Restraint is the product.
+You can ask it. The guardian is a Strands Agent whose only tools are the engine's five checks; every answer carries a decision trace (tool, input, data mode, gate decision), and follow-ups build on the last result.
 
-A second, deliberately thin pack proves the engine is generic: it matches a saved receipt against the live CPSC recall feed and pings once with the remedy, refund or voucher.
+Who it's for: H-1B and H-4 holders, students and workers on visas, backlog families, and their attorneys.
 
-### Who it's for
+### How we built it
 
-People whose status depends on paperwork from CBP, USCIS, and the State Department: H-1B and H-4 holders, international students and workers, and the families in the employment-based green-card backlog, and the attorneys who field their "is this normal?" emails.
+- **Deterministic engine.** Rules, decision gate, and ledger are plain Python with 204 offline tests. An event surfaces only if it is material, actionable, in window, and not already surfaced.
+- **The model at three edges.** Bedrock extracts fields with per-field evidence and explicit missing/ambiguous states; a Strands Agent writes only the draft's intro around a fixed core it cannot edit; the guardian only calls tools and reports.
+- **Honest modes.** Every result is labeled live or recorded; when Bedrock is unreachable the demo replays a byte-verified recording and says so.
+- **One human action.** Approval records an idempotent receipt. Nothing is sent unless a verified SES sender is configured.
+- **Deployed.** AgentCore Runtime with CloudWatch logs and X-Ray traces. `{}` runs the sample case, verified in the cloud: surfaced once, silent on repeat. The `{"prompt": ...}` guardian path awaits a redeploy.
+- **A second, thin pack** matches a receipt against the live CPSC recall feed: the engine is generic.
 
-### How it works
+### Challenges we ran into
 
-- **A deterministic engine, not a model judgment.** Rules, the decision gate, and the ledger are plain Python with tests. The gate lets an event through only if it is material, actionable, inside its window, and not already surfaced for that clock, event, and rule version. Everything else updates the ledger silently. Replays and restarts never produce a second ping.
-- **The model works at three edges only.** Amazon Bedrock extracts fields from the document images with per-field evidence and explicit "missing" and "ambiguous" states. A Strands Agent writes only the intro of the attorney draft around a fixed safety core it cannot edit. And the guardian agent, a Strands Agent whose only tools are the engine's checks, answers questions like "do my documents disagree?" by calling a tool and reporting the result. It cannot compute dates or determine status on its own, and every answer ships with a decision trace of which tool ran, on what input, and what the gate decided.
-- **Honest modes.** Every result is labeled live, recorded, or fallback. When Bedrock is unreachable the demo transparently replays the recorded extraction and says so.
-- **One human action.** "Approve for attorney review" records an idempotent receipt on the clock, event, and rule version. Nothing is sent; the demo has no mail transport and never claims one.
-- **Deployed.** The same pipeline runs on Amazon Bedrock AgentCore Runtime with CloudWatch logs and X-Ray traces on: `{}` runs the sample case (verified: surfaced once, silent on the repeat), and `{"prompt": ...}` hands a question to the guardian agent.
+- A payment-verification hold returned "Error 002" on every Bedrock model; the failover carried the demo, every response labeled.
+- Two bugs only live Bedrock found: JSON wrapped in a code fence, and dates in the document's printed format failing ISO validation.
+- Two AgentCore deploy breaks: base-only dependencies from `pyproject.toml` (fixed with a root `requirements.txt`) and a `source_path` that packaged only `deploy/`.
+- travel.state.gov blocks automated fetching; the bulletin months are captured fixtures.
 
-### What it deliberately does not do
+### Accomplishments that we're proud of
 
-It never states whether someone is in status, computes unlawful presence, or gives legal advice. Every output is a flag for the attorney. The upload flow is real, but the demo ships only synthetic specimens in the real I-94, I-797, and passport format, and public-demo mode refuses anything else, so nobody's actual papers touch a hackathon URL.
+It stays quiet: a replay, a restart, or a second upload of the same documents never produces a second ping, and the tests prove it. The upload flow is real; the specimens are synthetic.
+
+### What we learned
+
+Keep the model at the edges and the decision in code you can test. Build the fallback before you need it. Execution facts beat a model's explanation of itself.
+
+### What's next
+
+Redeploy the Runtime, provision the scheduled bulletin check, record the two remaining scenarios, then AgentCore Memory, Identity, Policy, and Gateway.
 
 ### Built with
 
-Strands Agents SDK, Amazon Bedrock (Converse API, multimodal documents), Amazon Bedrock AgentCore Runtime, FastAPI, SQLite, vanilla JavaScript. Public feeds: DOS Visa Bulletin with USCIS chart designation (captured), CPSC SaferProducts API (live).
+Strands Agents SDK, Amazon Bedrock (Converse, multimodal), AgentCore Runtime, SNS and SES (optional), FastAPI, SQLite, vanilla JavaScript. Feeds: DOS Visa Bulletin (captured), CPSC SaferProducts API (live).
