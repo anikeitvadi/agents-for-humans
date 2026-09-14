@@ -32,7 +32,7 @@
   <!-- BUILT BAND -->
   <rect x="60" y="236" width="1080" height="440" rx="12" fill="none" stroke="#2E8C77" stroke-width="2"/>
   <rect x="76" y="226" width="318" height="20" fill="#F7F8F6"/>
-  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 180 tests pass with no AWS credentials</text>
+  <text x="84" y="241" font-size="12" font-weight="700" fill="#2E8C77" letter-spacing="0.6">BUILT · runs locally · 204 tests pass with no AWS credentials</text>
 
   <!-- INPUTS -->
   <rect x="80" y="262" width="300" height="160" rx="8" fill="#FFFFFF" stroke="#8A97A3"/>

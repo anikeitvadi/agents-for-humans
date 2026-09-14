@@ -26,11 +26,11 @@ People whose status depends on paperwork from CBP, USCIS, and the State Departme
 - **The model works at three edges only.** Amazon Bedrock extracts fields from the document images with per-field evidence and explicit "missing" and "ambiguous" states. A Strands Agent writes only the intro of the attorney draft around a fixed safety core it cannot edit. And the guardian agent, a Strands Agent whose only tools are the engine's checks, answers questions like "do my documents disagree?" by calling a tool and reporting the result. It cannot compute dates or determine status on its own, and every answer ships with a decision trace of which tool ran, on what input, and what the gate decided.
 - **Honest modes.** Every result is labeled live, recorded, or fallback. When Bedrock is unreachable the demo transparently replays the recorded extraction and says so.
 - **One human action.** "Approve for attorney review" records an idempotent receipt on the clock, event, and rule version. Nothing is sent; the demo has no mail transport and never claims one.
-- **Deployed.** The same pipeline runs on Amazon Bedrock AgentCore Runtime, invoked with `{"prompt": ...}` for the agent or `{}` for the sample case, with CloudWatch logs and X-Ray traces on.
+- **Deployed.** The same pipeline runs on Amazon Bedrock AgentCore Runtime with CloudWatch logs and X-Ray traces on: `{}` runs the sample case (verified: surfaced once, silent on the repeat), and `{"prompt": ...}` hands a question to the guardian agent.
 
 ### What it deliberately does not do
 
-It never states whether someone is in status, computes unlawful presence, or gives legal advice. Every output is a flag for the attorney. There are no real document uploads: the demo runs on synthetic specimens in the real I-94, I-797, and passport format, so nobody's actual papers touch a hackathon URL.
+It never states whether someone is in status, computes unlawful presence, or gives legal advice. Every output is a flag for the attorney. The upload flow is real, but the demo ships only synthetic specimens in the real I-94, I-797, and passport format, and public-demo mode refuses anything else, so nobody's actual papers touch a hackathon URL.
 
 ### Built with
 

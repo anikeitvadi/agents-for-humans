@@ -44,7 +44,7 @@ Repo: [link].
 
 The Strands Agents SDK makes tools cheap: decorate a function, pass it to `Agent(tools=[...])`, done. The interesting design question is what to give the agent and what to keep from it. For our Agents for Humans immigration guardian we landed on a rule: the agent may only call tools that wrap the deterministic engine, on the same ledger the UI uses, and it must report their results.
 
-**Four tools, each a thin wrapper.** `check_document_dates` compares an I-94 date with an I-797 date and returns the gap. `run_sample_case_check` runs extraction, the rule, the gate, and the draft. `check_visa_bulletin` checks one month against the chart USCIS designated. `check_recall` matches a receipt against the CPSC feed. Each returns a structured JSON result with the data mode (live, recorded, fallback), the gate decision, and the reason.
+**Five tools, each a thin wrapper.** `check_document_dates` compares an I-94 date with an I-797 date and returns the gap. `run_sample_case_check` runs extraction, the rule, the gate, and the draft on the bundled sample. `check_uploaded_case` does the same for the specific case the person just uploaded. `check_visa_bulletin` checks one month against the chart USCIS designated. `check_recall` matches a receipt against the CPSC feed. Each returns a structured JSON result with the data mode (live, recorded, fallback), the gate decision, and the reason.
 
 **The system prompt is a fence, not a persona.** Never compute or compare dates yourself. Never state whether someone is in status. When a tool says surfaced, say one thing needs review and a draft is ready. When it says silent, say nothing new needs attention and why. If the tools can't answer, say so.
 

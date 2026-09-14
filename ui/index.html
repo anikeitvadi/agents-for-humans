@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Immigration Status Guardian</title>
+<meta name="description" content="Compares the dates on your immigration documents, watches the Visa Bulletin, and interrupts you exactly once when something needs your attorney's review. Decision support, not legal advice.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' fill='%23E5E3D8' stroke='%2320211E' stroke-width='2'/%3E%3Crect x='10' y='10' width='12' height='12' fill='%23B89A6A'/%3E%3C/svg%3E">
 <style>
   /* ------------------------------------------------------------------
      Visual system: editorial, calm, framed. Four section themes, each
@@ -140,7 +142,8 @@
   .public-notice { font: 12px/1.5 var(--mono); padding: 10px 0; border-bottom: 1px solid var(--hair); }
 
   /* Acts */
-  .act { position: relative; scroll-margin-top: var(--masthead-h); transition: background-color 1.2s ease, color 1.2s ease; }
+  .act, #upload-block { scroll-margin-top: var(--masthead-h); }
+  .act { position: relative; transition: background-color 1.2s ease, color 1.2s ease; }
   .act-inner { padding: 72px 48px 88px; }
   .act-head { display: grid; grid-template-columns: 200px 1fr; gap: 24px 40px; align-items: baseline; padding-bottom: 28px;
     border-bottom: 1px solid var(--hair); margin-bottom: 36px; }
@@ -444,7 +447,7 @@
       <span class="brand-name">Immigration Status Guardian</span>
     </a>
     <nav class="masthead-nav" aria-label="Sections">
-      <a href="#upload-step">01 Upload</a>
+      <a href="#upload-block">01 Upload</a>
       <a href="#review-step">02 Review</a>
       <a href="#bulletin-step">03 Monitor</a>
       <a href="#ask">04 Ask</a>
@@ -1163,7 +1166,7 @@ function renderResult(result) {
   enterReviewMode();
 
   const modeLabel = result.mode === 'live' ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
-  setTopMeta(`Case review · ${modeLabel}`);
+  setTopMeta(`Case review · ${result.mode === 'live' ? 'Live Bedrock' : 'Recorded replay'}`);
   const reason = result.mode_reason || '';
   const noCredentials = /no AWS credentials/i.test(reason);
   document.getElementById('mode-note').textContent = result.mode === 'live'

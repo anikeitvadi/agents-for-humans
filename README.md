@@ -6,13 +6,15 @@
 
 If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. This agent reads the documents, compares the dates the way a paralegal would, and interrupts you exactly once: "Your document dates differ by 55 days. Review this with your attorney." Then it goes quiet, and keeps watching the Visa Bulletin for you.
 
+![Immigration Status Guardian, opening screen](docs/screenshots/hero.png)
+
 ## Quickstart (about a minute)
 
 ```bash
 git clone https://github.com/anikeitvadi/agents-for-humans.git && cd agents-for-humans
 python -m venv .venv && source .venv/bin/activate        # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                                                    # 180 offline tests, no AWS needed
+pytest                                                    # 204 offline tests, no AWS needed
 uvicorn agent.app:app --reload                            # http://127.0.0.1:8000/
 ```
 
@@ -67,16 +69,17 @@ agent/
     recalls/      rules.py (exact manufacturer+product match, demo-scope),
                   feed.py (live CPSC API, captured fallback), pipeline.py
   app.py    FastAPI backend serving the API + the static UI
-ui/index.html   single-story demo UI: upload real documents, review the
-                discrepancy, approve the attorney draft, ask the guardian
-                about the uploaded case, then watch a bulletin replay
+ui/index.html   the demo page, one file, no external dependencies: opening
+                scene, real document upload, the review (55-day figure,
+                evidence, attorney draft + approval), bulletin replays with
+                per-month verdicts, and the guardian with its decision trace
 fixtures/sample_case/   three synthetic specimen images + a recorded extraction,
                         byte-verified against uploads in recorded mode
 fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
                         chart designation, one seeded case (see its README)
 fixtures/recalls/       one seeded receipt + a captured real CPSC recall
 deploy/   agentcore_entrypoint.py — AgentCore Runtime entrypoint (deployed)
-tests/    180 offline tests (rules, extraction, decision gate, bulletin poll,
+tests/    204 offline tests (rules, extraction, decision gate, bulletin poll,
           recall pipeline, guardian agent + trace + uploaded-case binding,
           Bedrock-denied fallback, approval receipts, upload identity/
           isolation, PNG validation, concurrency/reset-epoch, Runtime
@@ -101,7 +104,7 @@ tests/    180 offline tests (rules, extraction, decision gate, bulletin poll,
 **The decision gate** (`agent/engine/decision_gate.py`) is why the agent stays quiet: an event only surfaces if it's material, actionable, has an open window, and hasn't already been surfaced for the same event. Everything else updates the ledger silently.
 ## Sample scenarios
 
-Three bundled synthetic document sets, selectable above the upload cards (`/api/scenarios`, `agent/packs/immigration/scenarios.py`):
+Three bundled synthetic document sets, selectable in the upload section (`/api/scenarios`, `agent/packs/immigration/scenarios.py`):
 
 | Scenario | What the documents say | Expected outcome |
 |---|---|---|
@@ -168,7 +171,7 @@ Notes: the toolkit resolves dependencies from the root `requirements.txt`, which
 **Offline test suite** (`pytest -q`, no AWS credentials):
 
 ```
-180 passed, 5 deselected
+204 passed, 5 deselected
 ```
 
 **Live test suite** (`pytest -m live -q`, real AWS credentials + Bedrock model access):
@@ -177,7 +180,7 @@ Notes: the toolkit resolves dependencies from the root `requirements.txt`, which
 5 passed
 ```
 
-Combined (`pytest -q -m ''`): **185 passed**.
+Combined (`pytest -q -m ''`): **209** (204 offline + 5 live).
 
 **Real upload through `POST /api/process-documents`, live mode** (abbreviated):
 
@@ -247,7 +250,7 @@ Direct code deploy, memory off, CloudWatch logs and X-Ray traces on. The `{"prom
 }
 ```
 
-**Browser verification** (Chrome, 2026-09-11): load bundled sample & process (real upload through the actual endpoint), reprocess (silent, draft kept), open draft, approve (receipt shown, activity row added), close, ask the guardian about the uploaded case (live, correct decision trace), decision gate, reset (clean empty state). No console errors. The recall pack is backend-only now (see "How it works"), so it is not part of this UI click-through.
+**Browser verification** (Chrome, 2026-09-11, repeated after the 2026-09-14 redesign at desktop and 390px): load bundled sample & process (real upload through the actual endpoint), reprocess (silent, draft kept), open draft, approve (receipt shown, activity row added), close, ask the guardian about the uploaded case (live, correct decision trace), decision gate, reset (clean empty state). No console errors. The recall pack is backend-only now (see "How it works"), so it is not part of this UI click-through.
 
 ## Production path (not built for this deadline)
 
@@ -259,7 +262,7 @@ Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS crede
 ```bash
 python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                             # 180 offline tests, no AWS credentials required
+pytest                             # 204 offline tests, no AWS credentials required
 pytest -m live                     # 5 live tests: need Bedrock model access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```

@@ -7,7 +7,7 @@ Deadline: Mon Sep 14, 5:00pm PT. Submit by noon PT Monday. Judging is five equal
 | Material | Where | State |
 |---|---|---|
 | Architecture diagram (built vs. production path) | `docs/architecture.svg` | Done; needs a refresh if PR #2 merges (recall tab removed, five tools) |
-| Screenshots (case review, draft + approval, recall) | `docs/screenshots/*.png` | Done for `main`; regenerate after merge via `/?demo=full`, `/?demo=case&open=draft` |
+| Screenshots (hero, case review, draft + approval, mobile) | `docs/screenshots/*.png` | Regenerated 2026-09-11 after the redesign |
 | README with quickstart, cited "Why it matters", Evidence | `README.md` | Done; PR #2 rewrites parts for the upload flow |
 | Devpost description | `docs/submission/devpost-description.md` | Draft, ready to paste; adjust one paragraph if upload ships |
 | Video script (4:30) | `docs/submission/video-script.md` | Draft; button names change if PR #2 merges (see below) |
@@ -49,9 +49,9 @@ Recommendation: merge it Saturday morning after Ani clicks through it once. It p
 
 ## Recording setup
 
-- Screen: 1920×1080, browser at 100% zoom, one window, dark theme as shipped. Close other tabs.
+- Screen: 1920×1080, browser at 100% zoom, one window, the light editorial theme as shipped (2026-09-14 redesign). Close other tabs.
 - Terminal window pre-sized on the right for the AgentCore invoke and the curl coda, font 16pt.
-- Start state: `Reset demo` pressed, Demo controls expanded, guardian input empty.
+- Start state: `Reset demo` pressed, page at the top (opening scene), guardian input empty.
 - Voice: record voiceover separately after the screen capture if timing is tight. QuickTime or OBS both fine.
 - Total runtime target 4:30, hard cap 5:00. Rehearse with a stopwatch; cut the gate-illustration beat first if long.
 - Title card: product name, one-line pitch, "Strands Agents SDK · Amazon Bedrock AgentCore". Closing card: repo URL, both names.
@@ -73,6 +73,6 @@ Everything else is the live app.
 ## Risks and mitigations
 
 - Bedrock blocked on Ani's account: record on the partner's account, or record in recorded mode and say so.
-- CDN fonts/icons slow during recording: the app degrades gracefully; icons missing is acceptable, but reload once before recording.
+- The page has no CDN fonts, icons, or scripts since the 2026-09-14 redesign; nothing to preload. Reload once before recording anyway.
 - Runtime invoke slow on cold start: run it once off-camera first.
 - Video over 5 minutes: cut the decision-gate beat, then shorten the architecture voiceover.
