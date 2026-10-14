@@ -53,9 +53,11 @@ def test_registry_has_three_scenarios_with_distinct_specimens():
     assert all(len(owners) == 1 for owners in hashes.values())
 
 
-def test_only_recorded_scenarios_are_available_offline():
+def test_all_three_scenarios_are_available_offline():
     summary = {s["name"]: s for s in scenario_summaries()}
     assert summary["discrepant"]["available_offline"] is True
+    assert summary["matching"]["available_offline"] is True
+    assert summary["ambiguous"]["available_offline"] is True
     assert summary["discrepant"]["expected"] == "surfaced"
     assert summary["matching"]["expected"] == "silent"
     assert summary["ambiguous"]["expected"] == "needs_review"
@@ -78,19 +80,22 @@ def test_recorded_client_matches_on_bytes_before_reference_id():
     assert json.loads(response["output"]["message"]["content"][0]["text"])["admit_until"]["value"] == "2026-11-03"
 
 
-def test_coherence_rejects_mixed_sets_and_unrecorded_scenarios():
+def test_coherence_accepts_each_recorded_scenario_but_rejects_mixed_sets():
+    for name in ("discrepant", "matching", "ambiguous"):
+        hashes = {k: sha256_bytes(v) for k, v in _docs(name).items()}
+        assert coherent_recorded_scenario(hashes) == name  # all three now bundled
     discrepant = {k: sha256_bytes(v) for k, v in _docs("discrepant").items()}
-    assert coherent_recorded_scenario(discrepant) == "discrepant"
     mixed = dict(discrepant, passport=sha256_bytes(_docs("matching")["passport"]))
     assert coherent_recorded_scenario(mixed) is None
-    matching = {k: sha256_bytes(v) for k, v in _docs("matching").items()}
-    assert coherent_recorded_scenario(matching) is None  # no recording bundled yet
     assert coherent_recorded_scenario({"i94": "nope", "i797": "nope", "passport": "nope"}) is None
 
 
-def test_unrecorded_scenario_is_refused_in_recorded_mode_with_a_clear_reason(tmp_path):
+def test_incoherent_documents_are_refused_in_recorded_mode_with_a_clear_reason(tmp_path):
+    # Each document is a known specimen, but they come from two different
+    # scenarios, so the set matches no single bundled case and is refused.
+    mixed = dict(_docs("discrepant"), passport=_docs("matching")["passport"])
     result = run_case_from_documents(
-        Store(str(tmp_path / "l.db")), "c", RecordedResponseClient(), "recorded", BEDROCK_MODEL_ID, _docs("matching")
+        Store(str(tmp_path / "l.db")), "c", RecordedResponseClient(), "recorded", BEDROCK_MODEL_ID, mixed
     )
     assert result.alert is None
     assert result.extraction.needs_review is True

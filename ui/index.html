@@ -274,6 +274,10 @@
   .comparison-gap:empty { display: none; }
 
   .review-note { color: var(--muted); font-size: 15.5px; max-width: 56ch; margin-bottom: 22px; }
+  .review-mode { display: flex; align-items: center; gap: 9px; margin-top: 12px; font: 12px/1.5 var(--mono); color: var(--muted); }
+  .review-mode.is-live { color: var(--ink); }
+  .review-mode .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .review-mode.is-live .live-dot { background: var(--gold); }
   .review-actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 
   .workspace { display: grid; grid-template-columns: 3fr 2fr; gap: 56px; margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--hair); }
@@ -309,6 +313,14 @@
   .process-num { color: var(--accent-text); }
   .process-title { font: 500 21px/1.2 var(--sans); letter-spacing: -0.015em; }
   .process-desc { color: var(--muted); font-size: 14.5px; max-width: 54ch; }
+
+  .uh { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
+  .uh-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px 48px; padding: 24px 0; border-bottom: 1px solid var(--hair); align-items: baseline; }
+  .uh-claim { font: 500 20px/1.25 var(--sans); letter-spacing: -0.015em; }
+  .uh-proof { color: var(--muted); font-size: 14.5px; max-width: 60ch; }
+  .uh-link { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  .uh-link:hover { border-color: var(--ink); }
+  .uh-foot { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 28px; font: 12px/1.4 var(--mono); }
 
   .months { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--hair); border-radius: var(--radius); margin-top: 48px; overflow: hidden; }
   .month { padding: 28px 28px 30px; min-height: 260px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.8s ease; }
@@ -404,6 +416,7 @@
     .act-head, .scenario-row { grid-template-columns: 1fr; gap: 12px; }
     .act-desc { grid-column: 1; }
     .process li { grid-template-columns: 1fr; gap: 8px; }
+    .uh-row { grid-template-columns: 1fr; gap: 8px; }
     .ask-hero { grid-template-columns: 1fr; }
     .workspace { grid-template-columns: 1fr; gap: 40px; }
   }
@@ -577,6 +590,7 @@
 
     <div class="review-loaded hidden" id="review-loaded">
       <div class="status-chip" id="review-status"></div>
+      <p class="review-mode hidden" id="review-mode"></p>
       <div class="gate-strip hidden" id="review-gate" aria-label="Decision gate result"></div>
       <div class="review-figure hidden" id="review-figure">
         <span class="figure-number" id="review-figure-number"></span>
@@ -683,6 +697,38 @@
     </div>
     <div class="ask-history hidden" id="ask-history" aria-label="Earlier questions in this conversation">
       <p class="eyebrow ask-history-heading">Earlier in this session</p>
+    </div>
+  </div>
+</section>
+
+<section class="act theme-limestone" id="under-the-hood">
+  <div class="frame lined act-inner">
+    <div class="act-head">
+      <span class="act-index">Engineering</span>
+      <h2 class="act-title">Built to be trusted, not just demoed</h2>
+      <p class="act-desc">Where the model stops and deterministic code takes over — the part a reviewer actually cares about.</p>
+    </div>
+    <dl class="uh">
+      <div class="uh-row">
+        <dt class="uh-claim">The model can't edit the safety core</dt>
+        <dd class="uh-proof">The date math and the "a flag for your attorney, not a status determination" framing are deterministic Python. The model only personalizes the wording around them, so it can never invent a legal conclusion. <a class="uh-link" href="https://github.com/anikeitvadi/agents-for-humans/blob/main/agent/packs/immigration/rules.py">The rule →</a></dd>
+      </div>
+      <div class="uh-row">
+        <dt class="uh-claim">A decision gate, not a chatbot</dt>
+        <dd class="uh-proof">Material · actionable · window open · novel. An event has to clear all four before it reaches you — which is why repeats stay silent and the case where the dates agree never pings at all. <a class="uh-link" href="https://github.com/anikeitvadi/agents-for-humans/blob/main/agent/engine/decision_gate.py">The gate →</a></dd>
+      </div>
+      <div class="uh-row">
+        <dt class="uh-claim">Every answer shows its decision trace</dt>
+        <dd class="uh-proof">Ask the guardian above and each tool call, its input, the gate it cleared, and the result are read back from the agent's own message history — shown, not narrated.</dd>
+      </div>
+      <div class="uh-row">
+        <dt class="uh-claim">The whole engine runs without AWS, and is tested</dt>
+        <dd class="uh-proof">A scripted-model double exercises the real Strands tool loop offline, so the logic is verified independently of the network — green on every push. <a class="uh-link" href="https://github.com/anikeitvadi/agents-for-humans/actions">CI →</a></dd>
+      </div>
+    </dl>
+    <div class="uh-foot">
+      <a class="uh-link" href="https://github.com/anikeitvadi/agents-for-humans">Source on GitHub →</a>
+      <a class="uh-link" href="https://github.com/anikeitvadi/agents-for-humans/blob/main/docs/architecture.svg">Architecture diagram →</a>
     </div>
   </div>
 </section>
@@ -1245,8 +1291,15 @@ function renderResult(result) {
   resetReviewSection();
   enterReviewMode();
 
-  const modeLabel = result.mode === 'live' ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
-  setTopMeta(`Case review · ${result.mode === 'live' ? 'Live Bedrock' : 'Recorded replay'}`);
+  const liveRead = result.mode === 'live';
+  const modeLabel = liveRead ? 'Live Bedrock parse' : 'Recorded replay (matched to the known sample documents)';
+  setTopMeta(`Case review · ${liveRead ? 'Live Bedrock' : 'Recorded replay'}`);
+  const reviewMode = document.getElementById('review-mode');
+  reviewMode.className = `review-mode${liveRead ? ' is-live' : ''}`;
+  reviewMode.replaceChildren(
+    el('span', { className: 'live-dot' }),
+    el('span', { text: liveRead ? 'Read live by Claude on Amazon Bedrock' : 'Recorded replay — live Bedrock unavailable' }),
+  );
   const reason = result.mode_reason || '';
   const noCredentials = /no AWS credentials/i.test(reason);
   document.getElementById('mode-note').textContent = result.mode === 'live'
