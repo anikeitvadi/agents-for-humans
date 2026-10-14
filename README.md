@@ -2,11 +2,17 @@
 
 [![tests](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml/badge.svg)](https://github.com/anikeitvadi/agents-for-humans/actions/workflows/tests.yml)
 
-**One engine that reads the government so you don't have to.** Built for AWS "Agents for Humans" (Strands Agents SDK, Everyday Agents track, due Sep 14, 2026), deployed on Amazon Bedrock AgentCore Runtime.
+**An AI agent that reads a visa holder's immigration documents, catches the one date discrepancy that can silently shorten their legal stay, and interrupts them exactly once — then keeps watch and stays quiet.**
 
-If you live in the US on a visa, your stay runs on dates from agencies that don't talk to each other. This agent reads the documents, compares the dates the way a paralegal would, and interrupts you exactly once: "Your document dates differ by 55 days. Review this with your attorney." Then it goes quiet, and keeps watching the Visa Bulletin for you.
+A person's stay in the US runs on dates issued by agencies that don't talk to each other. The I-94 — not the approval notice — is the date that governs the stay, and CBP silently cuts it to the passport's expiry when the passport runs out first. Guardian reads the three documents, compares the governing dates the way a paralegal would, flags the gap for an attorney, and then watches the monthly Visa Bulletin, pinging only when a month actually changes the case.
 
-![Immigration Status Guardian, opening screen](docs/screenshots/hero.png)
+**▶ Live demo:** _link added at deploy_ · **Walkthrough:** the clip below · **Source:** you're in it
+
+![Guardian reads three documents, surfaces a 55-day discrepancy, and drafts an attorney message](docs/screenshots/demo.gif)
+
+**Stack.** [Strands Agents SDK](https://github.com/strands-agents/sdk-python) (the guardian agent and its tools) · Amazon Bedrock (Claude, live document extraction) · Bedrock AgentCore Runtime (deploy) · FastAPI + SQLite · a dependency-free single-page UI that makes zero network requests. ~195 tests, green on every push.
+
+**Why it's more than an LLM wrapper.** A deterministic safety core the model can't edit — it personalizes wording but never computes a date or states a legal conclusion; a four-criteria decision gate (material · actionable · window-open · novel) that keeps repeats silent and never pings when the dates agree; content-addressed case identity so one person's draft can never be served to another; and the whole engine — including the real Strands tool loop — is testable without AWS via a scripted-model double.
 
 ## In sixty seconds
 
@@ -17,13 +23,13 @@ If you live in the US on a visa, your stay runs on dates from agencies that don'
 - Drafts the attorney message around a fixed safety core the model cannot edit; one click records an approval receipt.
 - Keeps watching the Visa Bulletin and pings once when a month actually changes the case. Repeats stay silent.
 
-**The demo path.** Run the sample case → 55 days → Review attorney draft → Approve → Replay September (stays quiet) → Replay October (surfaced) → Load bundled sample & process again (silent, draft kept). Or open `/?demo=full` and watch it run.
+**The demo path.** Run the sample case → 55 days → Review attorney draft → Approve → Replay September (stays quiet) → Replay October (surfaced) → Load bundled sample & process again (silent, draft kept). Or open `/?demo=full` and watch it run. The scenario picker runs three cases through the real model: the 55-day gap (surfaced), dates that agree (stays silent), and a smudged passport the model refuses to guess on (needs review).
 
 ```bash
 git clone https://github.com/anikeitvadi/agents-for-humans.git && cd agents-for-humans
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest                          # 204 offline tests, no AWS needed
+pytest                          # 195 offline tests, no AWS needed
 uvicorn agent.app:app --reload  # http://127.0.0.1:8000/
 ```
 
@@ -44,6 +50,8 @@ uvicorn agent.app:app --reload  # http://127.0.0.1:8000/
 | The review section, after the full guided demo | The attorney draft, with approval |
 |---|---|
 | ![Case review](docs/screenshots/case-review.png) | ![Attorney draft](docs/screenshots/attorney-draft.png) |
+
+![The opening screen](docs/screenshots/hero.png)
 
 The page holds up at phone width too: `docs/screenshots/mobile-hero.png` and `docs/screenshots/mobile-review.png` are 390px captures of the opening scene and the review.
 
@@ -100,7 +108,7 @@ fixtures/bulletins/     two real consecutive Visa Bulletin months with the USCIS
                         chart designation, one seeded case (see its README)
 fixtures/recalls/       one seeded receipt + a captured real CPSC recall
 deploy/   agentcore_entrypoint.py — AgentCore Runtime entrypoint (deployed)
-tests/    204 offline tests (rules, extraction, decision gate, bulletin poll,
+tests/    195 offline tests (rules, extraction, decision gate, bulletin poll,
           recall pipeline, guardian agent + trace + uploaded-case binding,
           Bedrock-denied fallback, approval receipts, upload identity/
           isolation, PNG validation, concurrency/reset-epoch, Runtime
@@ -192,11 +200,13 @@ Notes: the toolkit resolves dependencies from the root `requirements.txt`, which
 
 **Live Bedrock, verified 2026-09-11 (after Anthropic's model use-case form cleared for the AWS account).** All three of the model-dependent pieces — document extraction (vision), the guardian agent, and draft personalization — were confirmed end to end against real Bedrock, not just the recorded fallback:
 
-**Offline test suite** (`pytest -q`, no AWS credentials):
+**Offline test suite** (`pytest -q`, no AWS credentials, after `pip install -e ".[dev]"`):
 
 ```
-204 passed, 5 deselected
+195 passed, 2 skipped, 5 deselected
 ```
+
+The 2 skips are the AgentCore entrypoint tests, which need the optional `.[deploy]` extra installed; they pass once it is. The 5 deselected are the live-Bedrock tests (`-m "not live"` by default).
 
 **Live test suite** (`pytest -m live -q`, real AWS credentials + Bedrock model access):
 
@@ -204,7 +214,7 @@ Notes: the toolkit resolves dependencies from the root `requirements.txt`, which
 5 passed
 ```
 
-Combined (`pytest -q -m ''`): **209** (204 offline + 5 live).
+Combined (`pytest -q -m ''`): **200** (195 offline + 5 live).
 
 **Real upload through `POST /api/process-documents`, live mode** (abbreviated):
 
@@ -287,7 +297,7 @@ Requires Python 3.11+ and, for anything beyond the rules-engine tests, AWS crede
 ```bash
 python -m venv .venv && source .venv/bin/activate   # or: uv venv && uv pip install -e ".[dev]"
 pip install -e ".[dev]"
-pytest                             # 204 offline tests, no AWS credentials required
+pytest                             # 195 offline tests, no AWS credentials required
 pytest -m live                     # 5 live tests: need Bedrock model access and network
 uvicorn agent.app:app --reload     # demo backend + UI at http://127.0.0.1:8000/
 ```

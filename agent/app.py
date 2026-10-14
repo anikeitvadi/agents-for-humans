@@ -474,4 +474,7 @@ def create_app(
     return app
 
 
-app = create_app(attempt_live_recall_feed=True)
+app = create_app(
+    db_path=os.environ.get("GUARDIAN_DB_PATH", "data/demo.db"),
+    attempt_live_recall_feed=True,
+)
